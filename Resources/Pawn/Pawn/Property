@@ -1,0 +1,4 @@
+move : 0 1 1
+move first : 0 2 1
+eat : -1 1 1
+eat : 1 1 1

@@ -1,0 +1,8 @@
+move eat : -1 -1
+move eat : -1 0
+move eat : -1 1
+move eat : 0 -1
+move eat : 0 1
+move eat : 1 -1
+move eat : 1 0
+move eat : 1 1
