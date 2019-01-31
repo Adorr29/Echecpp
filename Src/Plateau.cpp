@@ -90,10 +90,12 @@ bool Plateau::setStatus(const Vector2u &pawnPos)
 
     if (pawnPos.x >= size.x || pawnPos.y >= size.y)
         return false;
-    pawnRule = pawnMap.getPawnRule(tab[pawnPos.x][pawnPos.y].pawn.type);
-    if (!pawnRule)
-        return false;
     cleanStatus();
+    pawnRule = pawnMap.getPawnRule(tab[pawnPos.x][pawnPos.y].pawn.type);
+    if (!pawnRule) {
+        tab[pawnPos.x][pawnPos.y].basicStatus = BasicStatus::My;
+        return false;
+    }
     for (const PawnRule::Direp &move : pawnRule->getMove())
         for (size_t i = 1; move.rep ? i <= move.rep : true; i++) {
             Vector2u pos(i * move.dir.x + pawnPos.x, i * move.dir.y + pawnPos.y);

@@ -30,8 +30,8 @@ int main(void)
         for (Event event; window.pollEvent(event);) {
             if (event.type == Event::Closed)
                 window.close();
-            if (event.type == Event::MouseMoved) {
-                Vector2u pos = plateau.convertMousePos(Vector2i(event.mouseMove.x, event.mouseMove.y));
+            if (event.type == Event::MouseButtonPressed) {
+                Vector2u pos = plateau.convertMousePos(Vector2i(event.mouseButton.x, event.mouseButton.y));
                 if (pos != plateau.getSize())
                     plateau.setStatus(pos);
             }
