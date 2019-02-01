@@ -25,8 +25,12 @@ Plateau::Plateau()
         for (Uint32 j = 0; j < size.y / 2; j++)
             tab[i][size.y - 1 - j].pawn.type = tab[i][j].pawn.type;
     for (Uint32 i = 0; i < size.x; i++)
-        for (Uint32 j = 0; j < size.y; j++)
+        for (Uint32 j = 0; j < size.y; j++) {
             tab[i][j].pawn.color = j < size.y / 2 ? Color::Black : Color::White;
+            tab[i][j].pawn.first = true;
+            //tab[i][j].pawn.move = Vector2u(0, 0); // ?
+            tab[i][j].pawn.timePass = 1; //
+        }
 }
 
 Plateau::Plateau(const Vector2u &_size)
@@ -73,15 +77,52 @@ const Vector2u &Plateau::getSize() const
     return size;
 }
 
+#include <iostream> // tmp
+
 bool Plateau::move(const Vector2u &pawnPos, const Vector2u &movePos)
 {
-    if (pawnPos.y >= size.x || pawnPos.y >= size.y || movePos.y >= size.x || movePos.y >= size.y)
+    if (pawnPos.x >= size.x || pawnPos.y >= size.y || movePos.x >= size.x || movePos.y >= size.y)
         return false;
-    if (tab[pawnPos.x][pawnPos.y].pawn.type == "")
+    if (pawnPos == movePos || tab[pawnPos.x][pawnPos.y].pawn.type == "")
+        return false;
+    if (tab[pawnPos.x][pawnPos.y].basicStatus != BasicStatus::My)
+        return false;
+    if (tab[movePos.x][movePos.y].basicStatus != BasicStatus::Move && tab[movePos.x][movePos.y].basicStatus != BasicStatus::Eat)
         return false;
     tab[movePos.x][movePos.y].pawn = tab[pawnPos.x][pawnPos.y].pawn;
     tab[movePos.x][movePos.y].pawn.first = false;
+    //tab[movePos.x][movePos.y].pawn.move = movePos;
+    tab[movePos.x][movePos.y].pawn.timePass = 0;
+    tab[pawnPos.x][pawnPos.y].pawn.type = "";
+
+    //cout << "x: " << tab[movePos.x][movePos.y].pawn.move.x << endl; // tmp
+    //cout << "y: " << tab[movePos.x][movePos.y].pawn.move.y << endl; // tmp
     return true;
+}
+
+void Plateau::move() // ?
+{
+    for (Uint32 i = 0; i < size.x; i++)
+        for (Uint32 j = 0; j < size.y; j++)
+            /*if (tab[i][j].pawn.type != "" && tab[i][j].pawn.timePass < 1) {
+                tab[i][j].pawn.timePass += 1 / 10.0;
+                if (tab[i][j].pawn.timePass > 1) {
+                    Vector2u movePos(tab[movePos.x][movePos.y].pawn.move);
+
+                    tab[movePos.x][movePos.y].pawn = tab[i][j].pawn;
+                    tab[movePos.x][movePos.y].pawn.first = false;
+                    tab[movePos.x][movePos.y].pawn.move = Vector2u(0, 0); // ?
+                    tab[movePos.x][movePos.y].pawn.timePass = 1;
+                    tab[i][j].pawn.type = "";
+                }
+                }*/
+            if (tab[i][j].pawn.type != "") {
+                Vector2u movePos(tab[movePos.x][movePos.y].pawn.move);
+
+                tab[movePos.x][movePos.y].pawn = tab[i][j].pawn;
+                tab[movePos.x][movePos.y].pawn.first = false;
+                tab[i][j].pawn.type = "";
+            }
 }
 
 bool Plateau::setStatus(const Vector2u &pawnPos)
@@ -96,30 +137,8 @@ bool Plateau::setStatus(const Vector2u &pawnPos)
         tab[pawnPos.x][pawnPos.y].basicStatus = BasicStatus::My;
         return false;
     }
-    for (const PawnRule::Direp &move : pawnRule->getMove())
-        for (size_t i = 1; move.rep ? i <= move.rep : true; i++) {
-            Vector2u pos(i * move.dir.x + pawnPos.x, i * move.dir.y + pawnPos.y);
-
-            if (move.dir.x < 0 && (Uint32)(-move.dir.x) > pawnPos.x)
-                break;
-            if (move.dir.y < 0 && (Uint32)(-move.dir.y) > pawnPos.y)
-                break;
-            if (pos.x >= size.x || pos.y >= size.y)
-                break;
-            tab[pos.x][pos.y].basicStatus = BasicStatus::Move;
-        }
-    for (const PawnRule::Direp &eat : pawnRule->getEat())
-        for (size_t i = 1; eat.rep ? i <= eat.rep : true; i++) {
-            Vector2u pos(i * eat.dir.x + pawnPos.x, i * eat.dir.y + pawnPos.y);
-
-            if (eat.dir.x < 0 && (Uint32)(-eat.dir.x) > pawnPos.x)
-                break;
-            if (eat.dir.y < 0 && (Uint32)(-eat.dir.y) > pawnPos.y)
-                break;
-            if (pos.x >= size.x || pos.y >= size.y)
-                break;
-            tab[pos.x][pos.y].basicStatus = BasicStatus::Eat;
-        }
+    setBasicStatus(pawnPos, pawnRule->getMove(), BasicStatus::Move);
+    setBasicStatus(pawnPos, pawnRule->getEat(), BasicStatus::Eat);
     tab[pawnPos.x][pawnPos.y].basicStatus = BasicStatus::My;
     return true;
 }
@@ -178,4 +197,44 @@ void Plateau::draw(RenderTarget &target, RenderStates states) const
             statusRect.setFillColor(Color(statusColor.r, statusColor.g, statusColor.b, statusColor.a / 10));
             target.draw(statusRect, states);
         }
+}
+
+void Plateau::setBasicStatus(const Vector2u &pawnPos, const vector<PawnRule::Direp> &direpTab, const BasicStatus &status)
+{
+    for (const PawnRule::Direp &direp : direpTab) {
+        if (direp.first && !tab[pawnPos.x][pawnPos.y].pawn.first)
+            continue;
+        for (size_t i = 1; direp.rep ? i <= direp.rep : true; i++) {
+            Vector2u pos(i * direp.dir.x + pawnPos.x, i * direp.dir.y + pawnPos.y);
+
+            if (direp.dir.x < 0 && (Uint32)(-direp.dir.x) > pawnPos.x)
+                break;
+            if (direp.dir.y < 0 && (Uint32)(-direp.dir.y) > pawnPos.y)
+                break;
+            if (pos.x >= size.x || pos.y >= size.y)
+                break;
+            if (tab[pos.x][pos.y].pawn.type != "") {
+                if (status == BasicStatus::Eat)
+                    if (tab[pos.x][pos.y].pawn.color != tab[pawnPos.x][pawnPos.y].pawn.color)
+                        tab[pos.x][pos.y].basicStatus = status;
+                break;
+            }
+            if (status == BasicStatus::Move)
+                tab[pos.x][pos.y].basicStatus = status;
+
+
+            /*if (status == BasicStatus::Move) {
+                if (tab[pos.x][pos.y].pawn.type != "")
+                    break;
+                tab[pos.x][pos.y].basicStatus = status;
+            }
+            else if (status == BasicStatus::Eat) {
+                if (tab[pos.x][pos.y].pawn.type != "") {
+                    if (tab[pos.x][pos.y].pawn.color != tab[pawnPos.x][pawnPos.y].pawn.color)
+                        tab[pos.x][pos.y].basicStatus = status;
+                    break;
+                }
+                }*/
+        }
+    }
 }
