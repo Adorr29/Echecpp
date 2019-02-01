@@ -31,9 +31,8 @@ public:
 public:
     const vector<Direp> &getMove() const;
     const vector<Direp> &getEat() const;
-    //const string &param() const;
+    const string &getParam() const;
     bool load(const string &path);
-    //void ee(const Vector2u &pos, const Plateau &plateau) const;
 
 private:
     vector<Direp> move;

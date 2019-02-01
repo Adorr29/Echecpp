@@ -22,7 +22,6 @@ PawnMap pawnMap = PawnMap();
 int main(void)
 {
     RenderWindow window(VideoMode::getDesktopMode(), "Echec", Style::Fullscreen);
-    //Pawn pawn("Resources/Pawn/Rook");
     Plateau plateau;
     Vector2u select = plateau.getSize();
 
@@ -46,7 +45,6 @@ int main(void)
                 }
             }
         }
-        //plateau.move();
         window.clear();
         window.draw(plateau);
         window.display();

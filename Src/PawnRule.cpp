@@ -20,6 +20,11 @@ const vector<PawnRule::Direp> &PawnRule::getEat() const
     return eat;
 }
 
+const string &PawnRule::getParam() const
+{
+    return param;
+}
+
 bool PawnRule::load(const string &path)
 {
     ifstream file(path + "/Property");
@@ -50,29 +55,8 @@ bool PawnRule::load(const string &path)
         }
         else
             param += line + '|';
-    /*cout << "name: " << path + "/Property" << endl;
-    for (auto tmp : move)
-        cout << "move: " << tmp.dir.x << " " << tmp.dir.y << " " << tmp.rep << endl;
-    for (auto tmp : eat)
-        cout << "eat: " << tmp.dir.x << " " << tmp.dir.y << " " << tmp.rep << endl;
-        cout << "param: \"" << param << "\"" << endl << endl;*/
     return true;
 }
-
-/*void PawnRule::ee(const Vector2u &pos, const Plateau &plateau) const
-{
-    for (size_t i = 0; i < move.size(); i++)
-        for (size_t j = 0; true; j++) {
-            const Vector2u &size = plateau.getSize();
-            Uint32 x = j * move[i].dir.x + pos.x;
-            Uint32 y = j * move[i].dir.y + pos.y;
-
-            if ((Uint32)(-move[j].dir.x) > pos.x || (Uint32)(-move[j].dir.y) > pos.y || x >= size.x || y >= size.y)
-                break;
-            //plateau[x][y] = MOVE;
-            //plateau[x][y] = EAT;
-        }
-        }*/
 
 const string &Pawn::getName() const
 {
@@ -140,24 +124,26 @@ bool PawnMap::aff(RenderTarget &target, const vector<PawnParam> &paramList, cons
 
     if (paramList.size() != rectList.size())
         return false;
-    for (size_t i = 0; i < paramList.size(); i++)
-        if (pawn.find(paramList[i].type) != pawn.end()) {
-            const Texture &texture = pawn.at(paramList[i].type).getTexture();
-            const IntRect whiteRect = IntRect(0, 0, texture.getSize().x / 2, texture.getSize().y);
-            const IntRect blackRect = IntRect(texture.getSize().x / 2, 0, texture.getSize().x / 2, texture.getSize().y);
-
-            rectangle.setTexture(&texture);
-            rectangle.setPosition(rectList[i].left, rectList[i].top);
-            rectangle.setSize(Vector2f(rectList[i].width, rectList[i].height));
-            if (paramList[i].color == Color::Black)
-                rectangle.setTextureRect(blackRect);
-            else {
-                rectangle.setTextureRect(whiteRect);
-                rectangle.setFillColor(paramList[i].color);
-            }
-            target.draw(rectangle);
-        }
-        else
+    for (size_t i = 0; i < paramList.size(); i++) {
+        if (pawn.find(paramList[i].type) == pawn.end()) {
             result = false;
+            continue;
+        }
+        const Texture &texture = pawn.at(paramList[i].type).getTexture();
+        const IntRect whiteRect = IntRect(0, 0, texture.getSize().x / 2, texture.getSize().y);
+        const IntRect blackRect = IntRect(texture.getSize().x / 2, 0, texture.getSize().x / 2, texture.getSize().y);
+        Vector2f pos(rectList[i].left, rectList[i].top);
+
+        rectangle.setTexture(&texture);
+        rectangle.setPosition(pos);
+        rectangle.setSize(Vector2f(rectList[i].width, rectList[i].height));
+        if (paramList[i].color == Color::Black)
+            rectangle.setTextureRect(blackRect);
+        else {
+            rectangle.setTextureRect(whiteRect);
+            rectangle.setFillColor(paramList[i].color);
+        }
+        target.draw(rectangle);
+    }
     return result;
 }

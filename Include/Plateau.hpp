@@ -36,8 +36,7 @@ private:
 
 public:
     Plateau();
-    Plateau(const Vector2u &_size); // add a config tab
-    Plateau(const string &fileName);
+    Plateau(const Vector2u &_size, const PawnParam **_tab);
     Plateau(const Plateau &plateau);
     ~Plateau();
     bool loadFromFile(const string &_fileName);
@@ -48,7 +47,9 @@ public:
     Vector2u convertMousePos(const Vector2i &mousePos) const;
 
 private:
+    Plateau(const Vector2u &_size);
     void draw(RenderTarget &target, RenderStates states) const;
+    void setBasicStatus(const Vector2u &pawnPos, const vector<PawnRule::Direp> &direpTab, const BasicStatus &status);
     //void affBasicStatus() const;
 
 public:
