@@ -36,7 +36,7 @@ private:
 
 public:
     Plateau();
-    Plateau(const Vector2u &_size, const PawnParam **_tab);
+    Plateau(const Vector2u &_size, PawnParam **_tab); // const
     Plateau(const Plateau &plateau);
     ~Plateau();
     bool loadFromFile(const string &_fileName);

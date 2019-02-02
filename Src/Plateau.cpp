@@ -28,10 +28,11 @@ Plateau::Plateau()
         for (Uint32 j = 0; j < size.y; j++) {
             tab[i][j].pawn.color = j < size.y / 2 ? Color::Black : Color::White;
             tab[i][j].pawn.first = true;
+            tab[i][j].pawn.angle = j < size.y / 2 ? PawnParam::Angle::Down : PawnParam::Angle::Up;
         }
 }
 
-Plateau::Plateau(const Vector2u &_size, const PawnParam **_tab)
+Plateau::Plateau(const Vector2u &_size, PawnParam **_tab) // const
     : Plateau(_size)
 {
     for (Uint32 i = 0; i < size.x; i++)
@@ -64,7 +65,7 @@ bool Plateau::loadFromFile(const string &_fileName)
         return false;
     for (Uint32 i = 0; i < size.x; i++)
         for (Uint32 j = 0; j < size.y; j++)
-            if (!(file.read((char*)&size, sizeof(Vector2u))))
+            if (!(file.read((char*)&tab[i][j].pawn, sizeof(PawnParam))))
                 return false;
     fileName = _fileName;
     return true;
@@ -94,6 +95,7 @@ bool Plateau::move(const Vector2u &pawnPos, const Vector2u &movePos)
 bool Plateau::setStatus(const Vector2u &pawnPos)
 {
     const PawnRule *pawnRule;
+    PawnParam::Angle angle;
 
     if (pawnPos.x >= size.x || pawnPos.y >= size.y)
         return false;
@@ -103,8 +105,9 @@ bool Plateau::setStatus(const Vector2u &pawnPos)
         tab[pawnPos.x][pawnPos.y].basicStatus = BasicStatus::My;
         return false;
     }
-    setBasicStatus(pawnPos, pawnRule->getMove(), BasicStatus::Move);
-    setBasicStatus(pawnPos, pawnRule->getEat(), BasicStatus::Eat);
+    angle = tab[pawnPos.x][pawnPos.y].pawn.angle;
+    setBasicStatus(pawnPos, pawnRule->getMove(angle), BasicStatus::Move);
+    setBasicStatus(pawnPos, pawnRule->getEat(angle), BasicStatus::Eat);
     tab[pawnPos.x][pawnPos.y].basicStatus = BasicStatus::My;
     return true;
 }

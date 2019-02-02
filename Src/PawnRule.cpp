@@ -5,24 +5,51 @@
 ** PawnRule.hpp
 */
 
-#include <sstream>
+//#include <sstream>
 #include <fstream>
 #include "PawnRule.hpp"
 #include "Helper.hpp"
 
-const vector<PawnRule::Direp> &PawnRule::getMove() const
+const vector<PawnRule::Direp> PawnRule::getMove(const PawnParam::Angle &angle) const
 {
-    return move;
+    vector<Direp> moveRotate;
+
+    for (const Direp &direp : move)
+        moveRotate.push_back(rotate(direp, angle));
+    return moveRotate;
 }
 
-const vector<PawnRule::Direp> &PawnRule::getEat() const
+const vector<PawnRule::Direp> PawnRule::getEat(const PawnParam::Angle &angle) const
 {
-    return eat;
+    vector<Direp> eatRotate;
+
+    for (const Direp &direp : eat)
+        eatRotate.push_back(rotate(direp, angle));
+    return eatRotate;
 }
 
-const string &PawnRule::getParam() const
+const string &PawnRule::getProperty() const
 {
-    return param;
+    return property;
+}
+
+PawnRule::Direp PawnRule::rotate(const PawnRule::Direp &direp, const PawnParam::Angle &angle) const
+{
+    PawnRule::Direp rotatDirep = direp;
+
+    if (angle == PawnParam::Angle::Up) {
+        rotatDirep.dir.x = -direp.dir.x;
+        rotatDirep.dir.y = -direp.dir.y;
+    }
+    else if (angle == PawnParam::Angle::Right) {
+        rotatDirep.dir.x = direp.dir.y;
+        rotatDirep.dir.y = -direp.dir.x;
+    }
+    else if (angle == PawnParam::Angle::Left) {
+        rotatDirep.dir.x = -direp.dir.y;
+        rotatDirep.dir.y = direp.dir.x;
+    }
+    return rotatDirep;
 }
 
 bool PawnRule::load(const string &path)
@@ -34,7 +61,7 @@ bool PawnRule::load(const string &path)
         return false;
     move.clear();
     eat.clear();
-    param = "";
+    property = "";
     while (getline(file, line))
         if (line.find(':') != string::npos) {
             istringstream param(line.substr(line.find(':') + 1));
@@ -54,7 +81,7 @@ bool PawnRule::load(const string &path)
                 eat.push_back(direp);
         }
         else
-            param += line + '|';
+            property += line + '|';
     return true;
 }
 

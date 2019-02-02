@@ -14,11 +14,23 @@
 using namespace std;
 using namespace sf;
 
+
 struct PawnParam
 {
+public:
+    enum Angle
+    {
+        Up,
+        Right,
+        Down,
+        Left
+    };
+
+public:
     string type;
     Color color;
     bool first;
+    Angle angle;
 };
 
 #endif
