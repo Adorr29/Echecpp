@@ -5,7 +5,7 @@
 ** PawnRule.hpp
 */
 
-//#include <sstream>
+#include <sstream>
 #include <fstream>
 #include "PawnRule.hpp"
 #include "Helper.hpp"
