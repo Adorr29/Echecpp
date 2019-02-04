@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <SFML/Graphics.hpp>
+#include <SFML/Network.hpp>
 #include "PawnRule.hpp" // tmp
 
 using namespace std;
@@ -36,10 +37,11 @@ private:
 
 public:
     Plateau();
-    Plateau(const Vector2u &_size, PawnParam **_tab); // const
     Plateau(const Plateau &plateau);
+    Plateau(const Packet &packet);
     ~Plateau();
     bool loadFromFile(const string &_fileName);
+    bool loadFromPacket(Packet &packet);
     const Vector2u &getSize() const;
     bool move(const Vector2u &pawnPos, const Vector2u &movePos);
     bool setStatus(const Vector2u &pawnPos);

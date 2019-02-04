@@ -10,7 +10,7 @@
 #include "PawnRule.hpp"
 #include "Helper.hpp"
 
-const vector<PawnRule::Direp> PawnRule::getMove(const PawnParam::Angle &angle) const
+const vector<PawnRule::Direp> PawnRule::getMove(const Angle &angle) const
 {
     vector<Direp> moveRotate;
 
@@ -19,7 +19,7 @@ const vector<PawnRule::Direp> PawnRule::getMove(const PawnParam::Angle &angle) c
     return moveRotate;
 }
 
-const vector<PawnRule::Direp> PawnRule::getEat(const PawnParam::Angle &angle) const
+const vector<PawnRule::Direp> PawnRule::getEat(const Angle &angle) const
 {
     vector<Direp> eatRotate;
 
@@ -33,19 +33,19 @@ const string &PawnRule::getProperty() const
     return property;
 }
 
-PawnRule::Direp PawnRule::rotate(const PawnRule::Direp &direp, const PawnParam::Angle &angle) const
+PawnRule::Direp PawnRule::rotate(const PawnRule::Direp &direp, const Angle &angle) const
 {
     PawnRule::Direp rotatDirep = direp;
 
-    if (angle == PawnParam::Angle::Up) {
+    if (angle == Angle::Up) {
         rotatDirep.dir.x = -direp.dir.x;
         rotatDirep.dir.y = -direp.dir.y;
     }
-    else if (angle == PawnParam::Angle::Right) {
+    else if (angle == Angle::Right) {
         rotatDirep.dir.x = direp.dir.y;
         rotatDirep.dir.y = -direp.dir.x;
     }
-    else if (angle == PawnParam::Angle::Left) {
+    else if (angle == Angle::Left) {
         rotatDirep.dir.x = -direp.dir.y;
         rotatDirep.dir.y = direp.dir.x;
     }

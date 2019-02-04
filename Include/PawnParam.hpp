@@ -1,6 +1,6 @@
 /*
 ** EPITECH PROJECT, 2019
-** for_norme
+** Echec++
 ** File description:
 ** PawnParam.hpp
 */
@@ -14,19 +14,16 @@
 using namespace std;
 using namespace sf;
 
+enum Angle
+{
+    Up,
+    Right,
+    Down,
+    Left
+};
 
 struct PawnParam
 {
-public:
-    enum Angle
-    {
-        Up,
-        Right,
-        Down,
-        Left
-    };
-
-public:
     string type;
     Color color;
     bool first;

@@ -7,6 +7,7 @@
 
 #include <fstream>
 #include "Plateau.hpp"
+#include "Helper.hpp"
 
 Plateau::Plateau()
     : Plateau(Vector2u(8, 8))
@@ -28,16 +29,8 @@ Plateau::Plateau()
         for (Uint32 j = 0; j < size.y; j++) {
             tab[i][j].pawn.color = j < size.y / 2 ? Color::Black : Color::White;
             tab[i][j].pawn.first = true;
-            tab[i][j].pawn.angle = j < size.y / 2 ? PawnParam::Angle::Down : PawnParam::Angle::Up;
+            tab[i][j].pawn.angle = j < size.y / 2 ? Angle::Down : Angle::Up;
         }
-}
-
-Plateau::Plateau(const Vector2u &_size, PawnParam **_tab) // const
-    : Plateau(_size)
-{
-    for (Uint32 i = 0; i < size.x; i++)
-        for (Uint32 j = 0; j < size.y; j++)
-            tab[i][j].pawn = _tab[i][j];
 }
 
 Plateau::Plateau(const Plateau &plateau)
@@ -71,6 +64,18 @@ bool Plateau::loadFromFile(const string &_fileName)
     return true;
 }
 
+bool Plateau::loadFromPacket(Packet &packet)
+{
+    if (!(packet >> size))
+        return false;
+    for (Uint32 i = 0; i < size.x; i++)
+        for (Uint32 j = 0; j < size.y; j++)
+            if (!(packet >> tab[i][j].pawn))
+                return false;
+    fileName = "";
+    return true;
+}
+
 const Vector2u &Plateau::getSize() const
 {
     return size;
@@ -95,7 +100,7 @@ bool Plateau::move(const Vector2u &pawnPos, const Vector2u &movePos)
 bool Plateau::setStatus(const Vector2u &pawnPos)
 {
     const PawnRule *pawnRule;
-    PawnParam::Angle angle;
+    Angle angle;
 
     if (pawnPos.x >= size.x || pawnPos.y >= size.y)
         return false;

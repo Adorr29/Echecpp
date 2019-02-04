@@ -29,13 +29,13 @@ public:
     };
 
 public:
-    const vector<Direp> getMove(const PawnParam::Angle &angle = PawnParam::Angle::Down) const;
-    const vector<Direp> getEat(const PawnParam::Angle &angle = PawnParam::Angle::Down) const;
+    const vector<Direp> getMove(const Angle &angle = Angle::Down) const;
+    const vector<Direp> getEat(const Angle &angle = Angle::Down) const;
     const string &getProperty() const;
     bool load(const string &path);
 
 private:
-    Direp rotate(const Direp &direp, const PawnParam::Angle &angle = PawnParam::Angle::Down) const;
+    Direp rotate(const Direp &direp, const Angle &angle = Angle::Down) const;
 
 private:
     vector<Direp> move;

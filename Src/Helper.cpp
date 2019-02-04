@@ -20,3 +20,32 @@ string lastWordOfPath(const string &path)
     }
     return (name);
 }
+
+Packet &operator<<(Packet &packet, const Color &color)
+{
+    return packet << color.r << color.g << color.b << color.a;
+}
+
+Packet &operator>>(Packet &packet, Color &color)
+{
+    return packet >> color.r >> color.g >> color.b >> color.a;
+}
+
+Packet &operator<<(Packet &packet, const PawnParam &pawnParam)
+{
+    return packet << pawnParam.type
+                  << pawnParam.color
+                  << pawnParam.first
+                  << pawnParam.angle;
+}
+
+Packet &operator>>(Packet &packet, PawnParam &pawnParam)
+{
+    int tmp; // ??
+
+    return packet >> pawnParam.type
+                  >> pawnParam.color
+                  >> pawnParam.first
+                  >> tmp;
+    pawnParam.angle = (Angle)tmp;
+}
