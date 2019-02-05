@@ -29,6 +29,7 @@ private:
     };
     struct Tab
     {
+        bool exist;
         PawnParam pawn;
         BasicStatus basicStatus;
         vector<Vector2u> dangerStatus;

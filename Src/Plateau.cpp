@@ -27,6 +27,7 @@ Plateau::Plateau()
             tab[i][size.y - 1 - j].pawn.type = tab[i][j].pawn.type;
     for (Uint32 i = 0; i < size.x; i++)
         for (Uint32 j = 0; j < size.y; j++) {
+            tab[i][j].exist = true;
             tab[i][j].pawn.color = j < size.y / 2 ? Color::Black : Color::White;
             tab[i][j].pawn.first = true;
             tab[i][j].pawn.angle = j < size.y / 2 ? Angle::Down : Angle::Up;
@@ -57,14 +58,17 @@ bool Plateau::loadFromFile(const string &_fileName)
     if (!(file.read((char*)&size, sizeof(Vector2u))))
         return false;
     for (Uint32 i = 0; i < size.x; i++)
-        for (Uint32 j = 0; j < size.y; j++)
-            if (!(file.read((char*)&tab[i][j].pawn, sizeof(PawnParam))))
+        for (Uint32 j = 0; j < size.y; j++) {
+            if (!file.read((char*)&tab[i][j].exist, sizeof(bool))) // ?
                 return false;
+            if (!file.read((char*)&tab[i][j].pawn, sizeof(PawnParam))) // ?
+                return false;
+        }
     fileName = _fileName;
     return true;
 }
 
-bool Plateau::loadFromPacket(Packet &packet)
+bool Plateau::loadFromPacket(Packet &packet) // operator>> ? add saveAsPacket
 {
     if (!(packet >> size))
         return false;
@@ -85,6 +89,8 @@ bool Plateau::move(const Vector2u &pawnPos, const Vector2u &movePos)
 {
     if (pawnPos.x >= size.x || pawnPos.y >= size.y || movePos.x >= size.x || movePos.y >= size.y)
         return false;
+    if (!tab[pawnPos.x][pawnPos.y].exist || !tab[movePos.x][movePos.y].exist)
+        return false;
     if (pawnPos == movePos || tab[pawnPos.x][pawnPos.y].pawn.type == "")
         return false;
     if (tab[pawnPos.x][pawnPos.y].basicStatus != BasicStatus::My)
@@ -103,6 +109,8 @@ bool Plateau::setStatus(const Vector2u &pawnPos)
     Angle angle;
 
     if (pawnPos.x >= size.x || pawnPos.y >= size.y)
+        return false;
+    if (!tab[pawnPos.x][pawnPos.y].exist)
         return false;
     cleanStatus();
     pawnRule = pawnMap.getPawnRule(tab[pawnPos.x][pawnPos.y].pawn.type);
@@ -161,6 +169,8 @@ void Plateau::draw(RenderTarget &target, RenderStates states) const
             Vector2f rectPos(rectSize.x * i, rectSize.y * j);
             Color statusColor = Color::Transparent;
 
+            if (!tab[i][j].exist)
+                continue;
             rectPos.x += affRect.left;
             rectPos.y += affRect.top;
             rectangle.setPosition(rectPos);
@@ -194,6 +204,8 @@ void Plateau::setBasicStatus(const Vector2u &pawnPos, const vector<PawnRule::Dir
             if (direp.dir.y < 0 && (Uint32)(-direp.dir.y) > pawnPos.y)
                 break;
             if (pos.x >= size.x || pos.y >= size.y)
+                break;
+            if (!tab[pos.x][pos.y].exist)
                 break;
             if (tab[pos.x][pos.y].pawn.type != "") {
                 if (status == BasicStatus::Eat)

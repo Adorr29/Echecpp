@@ -37,6 +37,7 @@ PawnRule::Direp PawnRule::rotate(const PawnRule::Direp &direp, const Angle &angl
 {
     PawnRule::Direp rotatDirep = direp;
 
+    // default is Down
     if (angle == Angle::Up) {
         rotatDirep.dir.x = -direp.dir.x;
         rotatDirep.dir.y = -direp.dir.y;
