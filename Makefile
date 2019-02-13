@@ -14,6 +14,8 @@ INCDIR		=	Include/
 
 SRC		=	$(SRCDIR)Main.cpp \
 			$(SRCDIR)Helper.cpp \
+			$(SRCDIR)Receiver.cpp \
+			$(SRCDIR)Player.cpp \
 			$(SRCDIR)Plateau.cpp \
 			$(SRCDIR)PawnRule.cpp \
 
@@ -27,7 +29,7 @@ LDFLAGS		+=	-l sfml-window
 LDFLAGS		+=	-l sfml-graphics
 LDFLAGS		+=	-l sfml-network
 
-.cpp.o		:
+%.o		:	%.cpp
 			@$(CC) -c -o $@ $< $(CXXFLAGS)
 
 all		:	$(NAME)

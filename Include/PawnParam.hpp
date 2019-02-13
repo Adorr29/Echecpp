@@ -14,7 +14,7 @@
 using namespace std;
 using namespace sf;
 
-enum Angle
+enum Angle : Uint32
 {
     Up,
     Right,

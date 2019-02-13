@@ -20,7 +20,7 @@ using namespace sf;
 class Plateau : public Drawable, public Transformable
 {
 private:
-    enum BasicStatus
+    enum BasicStatus : Uint32
     {
         None,
         My,
@@ -42,8 +42,10 @@ public:
     Plateau(const Packet &packet);
     ~Plateau();
     bool loadFromFile(const string &_fileName);
-    bool loadFromPacket(Packet &packet);
+    Packet &loadFromPacket(Packet &packet);
+    Packet &saveToPacket(Packet &packet) const;
     const Vector2u &getSize() const;
+    bool checkMove(const Vector2u &pawnPos, const Vector2u &movePos) const;
     bool move(const Vector2u &pawnPos, const Vector2u &movePos);
     bool setStatus(const Vector2u &pawnPos);
     void cleanStatus();
@@ -63,5 +65,8 @@ private:
     Vector2u size;
     Tab **tab;
 };
+
+Packet &operator<<(Packet &packet, const Plateau &plateau);
+Packet &operator>>(Packet &packet, Plateau &plateau);
 
 #endif

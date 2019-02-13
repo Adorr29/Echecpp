@@ -41,11 +41,12 @@ Packet &operator<<(Packet &packet, const PawnParam &pawnParam)
 
 Packet &operator>>(Packet &packet, PawnParam &pawnParam)
 {
-    int tmp; // ??
+    Uint32 tmp; // ??
 
-    return packet >> pawnParam.type
-                  >> pawnParam.color
-                  >> pawnParam.first
-                  >> tmp;
+    packet >> pawnParam.type
+           >> pawnParam.color
+           >> pawnParam.first
+           >> tmp;
     pawnParam.angle = (Angle)tmp;
+    return packet;
 }

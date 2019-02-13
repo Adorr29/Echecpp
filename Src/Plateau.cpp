@@ -68,16 +68,33 @@ bool Plateau::loadFromFile(const string &_fileName)
     return true;
 }
 
-bool Plateau::loadFromPacket(Packet &packet) // operator>> ? add saveAsPacket
+Packet &Plateau::loadFromPacket(Packet &packet)
 {
     if (!(packet >> size))
-        return false;
+        return packet;
     for (Uint32 i = 0; i < size.x; i++)
-        for (Uint32 j = 0; j < size.y; j++)
+        for (Uint32 j = 0; j < size.y; j++) {
+            if (!(packet >> tab[i][j].exist))
+                return packet;
             if (!(packet >> tab[i][j].pawn))
-                return false;
+                return packet;
+        }
     fileName = "";
-    return true;
+    return packet;
+}
+
+Packet &Plateau::saveToPacket(Packet &packet) const
+{
+    if (!(packet << size))
+        return packet;
+    for (Uint32 i = 0; i < size.x; i++)
+        for (Uint32 j = 0; j < size.y; j++) {
+            if (!(packet << tab[i][j].exist))
+                return packet;
+            if (!(packet << tab[i][j].pawn))
+                return packet;
+        }
+    return packet;
 }
 
 const Vector2u &Plateau::getSize() const
@@ -85,7 +102,7 @@ const Vector2u &Plateau::getSize() const
     return size;
 }
 
-bool Plateau::move(const Vector2u &pawnPos, const Vector2u &movePos)
+bool Plateau::checkMove(const Vector2u &pawnPos, const Vector2u &movePos) const
 {
     if (pawnPos.x >= size.x || pawnPos.y >= size.y || movePos.x >= size.x || movePos.y >= size.y)
         return false;
@@ -96,6 +113,13 @@ bool Plateau::move(const Vector2u &pawnPos, const Vector2u &movePos)
     if (tab[pawnPos.x][pawnPos.y].basicStatus != BasicStatus::My)
         return false;
     if (tab[movePos.x][movePos.y].basicStatus != BasicStatus::Move && tab[movePos.x][movePos.y].basicStatus != BasicStatus::Eat)
+        return false;
+    return true;
+}
+
+bool Plateau::move(const Vector2u &pawnPos, const Vector2u &movePos)
+{
+    if (!checkMove(pawnPos, movePos))
         return false;
     tab[movePos.x][movePos.y].pawn = tab[pawnPos.x][pawnPos.y].pawn;
     tab[movePos.x][movePos.y].pawn.first = false;
@@ -217,4 +241,14 @@ void Plateau::setBasicStatus(const Vector2u &pawnPos, const vector<PawnRule::Dir
                 tab[pos.x][pos.y].basicStatus = status;
         }
     }
+}
+
+Packet &operator<<(Packet &packet, const Plateau &plateau)
+{
+    return plateau.saveToPacket(packet);
+}
+
+Packet &operator>>(Packet &packet, Plateau &plateau)
+{
+    return plateau.loadFromPacket(packet);
 }
