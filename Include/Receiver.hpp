@@ -38,11 +38,6 @@ public:
         // TODO
     };
 
-    struct TurnReceive
-    {
-        string name;
-    };
-
     struct MoveReceive
     {
         Vector2u pawnPos;
@@ -51,6 +46,7 @@ public:
 
     enum ErrorType : Uint32
     {
+        Ok,
         IllegalMove
     };
 
@@ -65,7 +61,7 @@ public:
         Plateau,
         Player,
         Pawn,
-        Turn,
+        YourTurn,
         Move,
         Error
     };
@@ -77,7 +73,6 @@ public:
         PlateauReceive plateau;
         PlayerReceive player;
         PawnReceive pawn;
-        TurnReceive turn;
         MoveReceive move;
         ErrorReceive error;
     //};

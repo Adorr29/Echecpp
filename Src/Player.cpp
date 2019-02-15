@@ -8,19 +8,9 @@
 #include "Player.hpp"
 #include "Helper.hpp"
 
-Player::Player(const string &_type, const string &_name, const Color &_color)
-    : type(_type), name(_name), color(_color)
+Player::Player(const Color &_color)
+    : color(_color)
 {
-}
-
-const string &Player::getType() const
-{
-    return type;
-}
-
-const string &Player::getName() const
-{
-    return name;
 }
 
 const Color &Player::getColor() const
@@ -46,13 +36,11 @@ bool Player::connectServer(unsigned short port)
     return true;
 }
 
-bool Player::sendTurn(const string &name)
+bool Player::sendYourTurn()
 {
     Packet packet;
 
-    if (!(packet << Receiver::Turn))
-        return false;
-    if (!(packet << name))
+    if (!(packet << Receiver::YourTurn))
         return false;
     return socket.send(packet) == Socket::Done;
 }
@@ -72,7 +60,7 @@ bool Player::sendError(const Receiver::ErrorType &error)
 {
     Packet packet;
 
-    if (!(packet << Receiver::Turn))
+    if (!(packet << Receiver::Error))
         return false;
     if (!(packet << error))
         return false;

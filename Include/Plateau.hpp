@@ -27,6 +27,7 @@ private:
         Move,
         Eat
     };
+
     struct Tab
     {
         bool exist;
@@ -59,6 +60,7 @@ private:
 
 public:
     IntRect affRect;
+    Vector2u select;
 
 private:
     string fileName;

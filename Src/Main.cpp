@@ -8,6 +8,8 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <thread> // ??
+#include <functional>
 #include <SFML/Network.hpp>
 #include "Player.hpp"
 #include "Plateau.hpp"
@@ -22,95 +24,97 @@ PawnMap pawnMap = PawnMap(); // tmp
 
 int PORTADD = 0; //tmp
 
-bool getTurn(Player &player, string &turnName)
+bool waitMyTurnLock = false;
+
+bool waitMyTurn(Plateau *plateau, Player *my, bool *myTurn) // (return ?)
 {
     Receiver receive;
 
-    if (!player.receive(receive)) {
-        cerr << "receive turn faild" << endl;
-        return false;
+    waitMyTurnLock = true;
+    if (!my->receive(receive)) {
+        cerr << "receive faild" << endl;
+        waitMyTurnLock = false;
+        exit(84);return false;
     }
-    else if (receive.type == Receiver::Turn)
-        turnName = receive.turn.name;
-    else
-        return false;
-    cout << "turnName: " << turnName << endl;
+    if (receive.type == Receiver::YourTurn) {
+        *myTurn = true;
+        cerr << "my turn !" << endl;
+    }
+    else if (receive.type == Receiver::Move) {
+        plateau->setStatus(receive.move.pawnPos);
+        plateau->move(receive.move.pawnPos, receive.move.movePos);
+        if (plateau->select != plateau->getSize())
+            plateau->setStatus(plateau->select);
+        else
+            plateau->cleanStatus();
+        cerr << "move receive" << endl;
+    }
+    else {
+        cerr << "bad receive type (" << receive.type << ")" << endl;
+        waitMyTurnLock = false;
+        exit(84);return false;
+    }
+    waitMyTurnLock = false;
     return true;
 }
 
 int game(RenderWindow &window, Plateau &plateau)
 {
-    Player my("human", (PORT + PORTADD) % 2 == 0 ? "me" : "no me", PORT % 2 == 0 ? Color::White : Color::Black); // tmp
-    Vector2u select = plateau.getSize();
-    string turnName;
+    Player my(true ? Color::White : Color::Black); // tmp
+    bool myTurn = false;
+    Thread waitMyTurnThread(bind(&waitMyTurn, &plateau, &my, &myTurn));
 
-    cerr << "my name: " << my.getName() << endl;
     for (size_t i = 0; i < 10 && !my.connectClient("10.19.254.109", PORT + i); i++);
-    if (!getTurn(my, turnName))
-        cerr << "first getTurn faild" << endl;
-    cerr << "turnName: " << turnName << endl;
     while (window.isOpen()) {
-        if (turnName != my.getName()) {
-            Receiver receive;
+        if (!myTurn && !waitMyTurnLock)
+            waitMyTurnThread.launch();
+        for (Event event; window.pollEvent(event);) {
+            if (event.type == Event::Closed)
+                window.close();
+            else if (event.type == Event::MouseButtonPressed) {
+                Vector2i mousePos(event.mouseButton.x, event.mouseButton.y);
+                Vector2u pos = plateau.convertMousePos(mousePos);
 
-            cout << "wait opo" << endl;
-            if (!my.receive(receive))
-                cerr << "receive get opo move faild" << endl;
-            else if (receive.type == Receiver::Move) {
-                plateau.setStatus(receive.move.pawnPos);
-                plateau.move(receive.move.pawnPos, receive.move.movePos);
-                if (select != plateau.getSize())
-                    plateau.setStatus(select);
-                else
-                    plateau.cleanStatus();
-                if (!getTurn(my, turnName))
-                    cerr << "receive turn after opo faild" << endl;
-                cout << "turnName: " << turnName << endl;
-            }
-        }
-        else
-            for (Event event; window.pollEvent(event);) {
-                if (event.type == Event::Closed)
-                    window.close();
-                if (event.type == Event::MouseButtonPressed) {
-                    Vector2i mousePos(event.mouseButton.x, event.mouseButton.y);
-                    Vector2u pos = plateau.convertMousePos(mousePos);
+                if (pos != plateau.getSize()) {
+                    if (plateau.select != plateau.getSize() && myTurn && plateau.checkMove(plateau.select, pos)) {
+                        Receiver receive;
 
-                    if (pos != plateau.getSize()) {
-                        if (select != plateau.getSize() && my.getName() == turnName && plateau.checkMove(select, pos)) {
-                            Receiver receive;
-
-                            cout << select.x << " " << select.y << " | " << pos.x << " " << pos.y << endl;
-                            if (!my.sendMove(select, pos))
-                                cerr << "send move faild" << endl;
-                            if (!my.receive(receive))
-                                cerr << "receive check server faild" << endl;
-                            else if (receive.type == Receiver::Move) {
+                        cout << plateau.select.x << " " << plateau.select.y << " | " << pos.x << " " << pos.y << endl;
+                        if (!my.sendMove(plateau.select, pos)) {
+                            cerr << "send move faild" << endl;
+                            return false;
+                        }
+                        if (!my.receive(receive)) {
+                            cerr << "receive check server faild" << endl;
+                            return false;
+                        }
+                        if (receive.type == Receiver::Error) {
+                            if (receive.error.type == Receiver::Ok) {
                                 plateau.move(receive.move.pawnPos, receive.move.movePos);
-                                select = plateau.getSize();
+                                plateau.select = plateau.getSize();
                                 plateau.cleanStatus();
-                                if (!getTurn(my, turnName))
-                                    cout << "getTurn faild" << endl;
+                                cerr << "end of my turn" << endl;
+                                myTurn = false;
+                            }
+                            else if (receive.error.type == Receiver::IllegalMove)
+                                cerr << "Illegal Move" << endl;
+                            else {
+                                cerr << "bad receive error type" << endl;
+                                return false;
                             }
                         }
                         else {
-                            select = pos;
-                            plateau.setStatus(pos);
+                            cerr << "bad receive type" << endl;
+                            return false;
                         }
-
-
-
-                        /*if (select != plateau.getSize() && plateau.move(select, pos)) {
-                          select = plateau.getSize();
-                          plateau.cleanStatus();
-                          }
-                          else {
-                          select = pos;
-                          plateau.setStatus(pos);
-                          }*/
+                    }
+                    else {
+                        plateau.select = pos;
+                        plateau.setStatus(pos);
                     }
                 }
             }
+        }
         window.clear();
         window.draw(plateau);
         window.display();
@@ -143,7 +147,7 @@ int server()
     TcpListener listener;
 
     for (size_t i = 0; i < 2; i++) { // tmp
-        Player *player = new Player("human", !i ? "me" : "no me", !i ? Color::White : Color::Black);
+        Player *player = new Player(!i ? Color::White : Color::Black);
 
         if (!player->connectServer(PORT + i)) {
             cerr << "connect faild (i:" << i << ")" << endl;
@@ -151,36 +155,37 @@ int server()
         }
         playerList.push_back(player);
     }
-    cout << "all players here:" << endl;
-    for (size_t i = 0; i < playerList.size(); i++)
-        cout << " - i:" << i << " " << playerList[i]->getName() << endl;
-    for (Player *player : playerList)
-        if (!player->sendTurn(playerList[turn]->getName())) {
-            cerr << "send first turn faild (name:" << player->getName() << ")" << endl;
-            return 84;
-        }
+    cout << "all players here" << endl;
     while (true) { // tmp
         Receiver receive;
         Vector2u pos1;
         Vector2u pos2;
 
-        cerr << "turn of " << playerList[turn]->getName() << endl;
+        if (!playerList[turn]->sendYourTurn())
+            cerr << "sendTurn faild (turn: " << turn << ")" << endl;
         if (!playerList[turn]->receive(receive)) {
             cerr << "receive move faild" << endl;
             break;
         }
-        else if (receive.type == Receiver::Move) {
+        if (receive.type == Receiver::Move) {
             pos1 = receive.move.pawnPos;
             pos2 = receive.move.movePos;
         }
         else {
-            cerr << "bad receive" << endl;
+            cerr << "bad receive type" << endl;
             break;
         }
-        cout << playerList[turn]->getName() << ": " << pos1.x << " " << pos1.y << " | " << pos2.x << " " << pos2.y << endl;
-        if (!plateau.setStatus(pos1) || !plateau.move(pos1, pos2)) {
-            cerr << "bad pos" << endl;
-            if (playerList[turn]->sendError(Receiver::IllegalMove)) {
+        cout << turn << ": " << pos1.x << " " << pos1.y << " | " << pos2.x << " " << pos2.y << endl;
+        // TODO : check color of pawn on pos1
+        if (plateau.setStatus(pos1) && plateau.move(pos1, pos2)) {
+            if (!playerList[turn]->sendError(Receiver::Ok)) {
+                cerr << "OK send faild" << endl;
+                break;
+            }
+        }
+        else {
+            cerr << "bad move" << endl;
+            if (!playerList[turn]->sendError(Receiver::IllegalMove)) {
                 cerr << "error send faild" << endl;
                 break;
             }
@@ -188,18 +193,12 @@ int server()
         }
         for (Player *player : playerList)
             if (!player->sendMove(pos1, pos2)) {
-                cerr << "send faild" << endl;
+                cerr << "send move faild" << endl;
                 break;
             }
         turn++;
         if (turn >= playerList.size())
             turn = 0;
-        cerr << "PASS => " << "turn:" << turn << " name:" << playerList[turn]->getName() << endl;
-        for (Player *player : playerList)
-            if (!player->sendTurn(playerList[turn]->getName())) {
-                cerr << "send faild" << endl;
-                break;
-            }
     }
     for (size_t i = 0; i < playerList.size(); i++)
         delete playerList[i];
@@ -210,11 +209,7 @@ int main(int argc, char **argv)
 {
     if (argc == 1)
         return client();
-    if (argc == 2 && (string(argv[1]) == "server" || string(argv[1]) == "s"))
+    else if (argc == 2 && (string(argv[1]) == "server" || string(argv[1]) == "s"))
         return server();
-    else { // tmp
-        PORTADD = 1;
-        return client();
-    }
     return 84;
 }

@@ -173,7 +173,7 @@ Vector2u Plateau::convertMousePos(const Vector2i &mousePos) const
 }
 
 Plateau::Plateau(const Vector2u &_size)
-    : affRect(IntRect(480, 60, 960, 960)), size(_size)
+    : affRect(IntRect(480, 60, 960, 960)), select(_size), size(_size)
 {
     tab = new Tab* [size.x];
     for (Uint32 i = 0; i < size.x; i++)

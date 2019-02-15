@@ -25,9 +25,8 @@ bool receiveFormatted(TcpSocket &socket, Receiver &receiver)
     else if (receiver.type == Receiver::PacketType::Pawn) {
         // TODO
     }
-    else if (receiver.type == Receiver::PacketType::Turn) {
-        if (!(packet >> receiver.turn.name))
-            return false;
+    else if (receiver.type == Receiver::PacketType::YourTurn) {
+        // none
     }
     else if (receiver.type == Receiver::PacketType::Move) {
         if (!(packet >> receiver.move.pawnPos))
