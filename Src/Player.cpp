@@ -18,7 +18,7 @@ const Color &Player::getColor() const
     return color;
 }
 
-bool Player::connectClient(const string &ip, unsigned short port)
+bool Player::connectClient(const IpAddress &ip, unsigned short port)
 {
     if (socket.connect(ip, port) != Socket::Done)
         return false;
@@ -34,6 +34,26 @@ bool Player::connectServer(unsigned short port)
     if (listener.accept(socket) != Socket::Done)
         return false;
     return true;
+}
+
+bool Player::sendPlanPlateau(const PlanPlateau &planPlateau)
+{
+    Packet packet;
+
+    if (!(packet << Receiver::PlateauPlan)) // ?
+      return false;
+    if (!(packet << planPlateau.getFileName()))
+        return false;
+    if (!(packet << planPlateau.getSize()))
+        return false;
+    for (Uint32 i = 0; i < planPlateau.getSize().x; i++)
+        for (Uint32 j = 0; j < planPlateau.getSize().y; j++) {
+            if (!(packet << planPlateau.getExist(i, j)))
+                return false;
+            if (!(packet << planPlateau.getPawn(i, j)))
+                return false;
+        }
+    return socket.send(packet) == Socket::Done;
 }
 
 bool Player::sendYourTurn()

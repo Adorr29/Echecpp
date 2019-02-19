@@ -11,8 +11,10 @@
 #include <string>
 #include <SFML/Graphics.hpp>
 #include <SFML/Network.hpp>
+#include "Plan/PlanPlateau.hpp"
 //#include "PawnRule.hpp"
-//#include "Plateau.hpp"
+#include "Plateau.hpp"
+//#include "Player.hpp"
 
 using namespace std;
 using namespace sf;
@@ -25,11 +27,15 @@ public:
 
     struct PlateauReceive
     {
-        // TODO
+        string fileName;
+        Vector2u size;
+        vector<bool> exist;
+        vector<PawnParam> pawn;
     };
 
     struct PlayerReceive
     {
+        Color color;
         // TODO
     };
 
@@ -58,7 +64,7 @@ public:
 
     enum PacketType : Uint32
     {
-        Plateau,
+        PlateauPlan,
         Player,
         Pawn,
         YourTurn,
@@ -70,11 +76,11 @@ public:
 
     //union // ???
     //{
-        PlateauReceive plateau;
-        PlayerReceive player;
-        PawnReceive pawn;
-        MoveReceive move;
-        ErrorReceive error;
+    PlanPlateau planPlateau;
+    PlayerReceive player;
+    PawnReceive pawn;
+    MoveReceive move;
+    ErrorReceive error;
     //};
 };
 

@@ -34,6 +34,17 @@ Plateau::Plateau()
         }
 }
 
+Plateau::Plateau(const PlanPlateau &planPlateau)
+    : Plateau(planPlateau.getSize())
+{
+    for (Uint32 i = 0; i < size.x; i++)
+        for (Uint32 j = 0; j < size.y; j++) {
+            tab[i][j].exist = planPlateau.getExist(i, j);
+            tab[i][j].pawn = planPlateau.getPawn(i, j);
+        }
+    fileName = planPlateau.getFileName();
+}
+
 Plateau::Plateau(const Plateau &plateau)
     : Plateau(plateau.size)
 {
@@ -49,52 +60,48 @@ Plateau::~Plateau()
     delete [] tab;
 }
 
-bool Plateau::loadFromFile(const string &_fileName)
+PlanPlateau Plateau::getPlan() const
 {
-    ifstream file(_fileName, ios::binary);
+    PlanPlateau planPlateau;
 
-    if (!file)
-        return false;
-    if (!(file.read((char*)&size, sizeof(Vector2u))))
+    planPlateau.setSize(size);
+    for (Uint32 i = 0; i < size.x; i++)
+        for (Uint32 j = 0; j < size.y; j++) {
+            planPlateau.setExist(i, j, tab[i][j].exist);
+            planPlateau.setPawn(i, j, tab[i][j].pawn);
+        }
+    planPlateau.setFileName(fileName);
+    return planPlateau;
+}
+
+bool Plateau::saveToFile() const
+{
+    ofstream file(fileName, ios::binary);
+
+    if (!(file.write((char*)&size, sizeof(Vector2u))))
         return false;
     for (Uint32 i = 0; i < size.x; i++)
         for (Uint32 j = 0; j < size.y; j++) {
-            if (!file.read((char*)&tab[i][j].exist, sizeof(bool))) // ?
+            if (!(file.write((char*)&tab[i][j].exist, sizeof(bool)))) // ?
                 return false;
-            if (!file.read((char*)&tab[i][j].pawn, sizeof(PawnParam))) // ?
+            /*if (!(file.write((char*)&tab[i][j].pawn, sizeof(PawnParam)))) // ?
+              return false;*/
+            if (!(file.write(tab[i][j].pawn.type.c_str(), sizeof(char) * (tab[i][j].pawn.type.size() + 1)))) // ?
+                return false;
+            if (!(file.write((char*)&tab[i][j].pawn.color, sizeof(Color)))) // ?
+                return false;
+            if (!(file.write((char*)&tab[i][j].pawn.first, sizeof(bool)))) // ?
+                return false;
+            if (!(file.write((char*)&tab[i][j].pawn.angle, sizeof(Angle)))) // ?
                 return false;
         }
-    fileName = _fileName;
     return true;
 }
 
-Packet &Plateau::loadFromPacket(Packet &packet)
+bool Plateau::saveToFile(const string &_fileName)
 {
-    if (!(packet >> size))
-        return packet;
-    for (Uint32 i = 0; i < size.x; i++)
-        for (Uint32 j = 0; j < size.y; j++) {
-            if (!(packet >> tab[i][j].exist))
-                return packet;
-            if (!(packet >> tab[i][j].pawn))
-                return packet;
-        }
-    fileName = "";
-    return packet;
-}
-
-Packet &Plateau::saveToPacket(Packet &packet) const
-{
-    if (!(packet << size))
-        return packet;
-    for (Uint32 i = 0; i < size.x; i++)
-        for (Uint32 j = 0; j < size.y; j++) {
-            if (!(packet << tab[i][j].exist))
-                return packet;
-            if (!(packet << tab[i][j].pawn))
-                return packet;
-        }
-    return packet;
+    fileName = _fileName;
+    return saveToFile();
 }
 
 const Vector2u &Plateau::getSize() const
@@ -178,6 +185,7 @@ Plateau::Plateau(const Vector2u &_size)
     tab = new Tab* [size.x];
     for (Uint32 i = 0; i < size.x; i++)
         tab[i] = new Tab [size.y];
+    cleanStatus();
 }
 
 void Plateau::draw(RenderTarget &target, RenderStates states) const
@@ -241,14 +249,4 @@ void Plateau::setBasicStatus(const Vector2u &pawnPos, const vector<PawnRule::Dir
                 tab[pos.x][pos.y].basicStatus = status;
         }
     }
-}
-
-Packet &operator<<(Packet &packet, const Plateau &plateau)
-{
-    return plateau.saveToPacket(packet);
-}
-
-Packet &operator>>(Packet &packet, Plateau &plateau)
-{
-    return plateau.loadFromPacket(packet);
 }

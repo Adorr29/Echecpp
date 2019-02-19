@@ -12,6 +12,7 @@
 #include <vector>
 #include <SFML/Graphics.hpp>
 #include <SFML/Network.hpp>
+#include <Plan/PlanPlateau.hpp>
 #include "PawnRule.hpp" // tmp
 
 using namespace std;
@@ -39,12 +40,12 @@ private:
 
 public:
     Plateau();
+    Plateau(const PlanPlateau &planPlateau);
     Plateau(const Plateau &plateau);
-    Plateau(const Packet &packet);
     ~Plateau();
-    bool loadFromFile(const string &_fileName);
-    Packet &loadFromPacket(Packet &packet);
-    Packet &saveToPacket(Packet &packet) const;
+    PlanPlateau getPlan() const;
+    bool saveToFile() const;
+    bool saveToFile(const string &_fileName);
     const Vector2u &getSize() const;
     bool checkMove(const Vector2u &pawnPos, const Vector2u &movePos) const;
     bool move(const Vector2u &pawnPos, const Vector2u &movePos);
@@ -67,8 +68,5 @@ private:
     Vector2u size;
     Tab **tab;
 };
-
-Packet &operator<<(Packet &packet, const Plateau &plateau);
-Packet &operator>>(Packet &packet, Plateau &plateau);
 
 #endif

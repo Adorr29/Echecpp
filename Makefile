@@ -10,6 +10,7 @@ NAME		=	Echec++
 CC		=	g++
 
 SRCDIR		=	Src/
+SRCPLANDIR	=	$(SRCDIR)Plan/
 INCDIR		=	Include/
 
 SRC		=	$(SRCDIR)Main.cpp \
@@ -18,6 +19,7 @@ SRC		=	$(SRCDIR)Main.cpp \
 			$(SRCDIR)Player.cpp \
 			$(SRCDIR)Plateau.cpp \
 			$(SRCDIR)PawnRule.cpp \
+			$(SRCPLANDIR)PlanPlateau.cpp \
 
 OBJ		=	$(SRC:.cpp=.o)
 

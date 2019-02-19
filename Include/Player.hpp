@@ -16,15 +16,17 @@
 using namespace std;
 using namespace sf;
 
-#define PORT 53000 // ??
+#define IP IpAddress::getLocalAddress() // ??
+#define PORT 53000 // ?
 
 class Player
 {
 public:
     Player(const Color &_color);
     const Color &getColor() const;
-    bool connectClient(const string &ip, unsigned short port = PORT);
+    bool connectClient(const IpAddress &ip = IP, unsigned short port = PORT);
     bool connectServer(unsigned short port = PORT);
+    bool sendPlanPlateau(const PlanPlateau &planPlateau);
     bool sendYourTurn();
     bool sendMove(const Vector2u &pawnPos, const Vector2u &movePos);
     bool sendError(const Receiver::ErrorType &error);

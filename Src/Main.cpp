@@ -8,7 +8,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <thread> // ??
 #include <functional>
 #include <SFML/Network.hpp>
 #include "Player.hpp"
@@ -22,8 +21,6 @@ using namespace sf;
 
 PawnMap pawnMap = PawnMap(); // tmp
 
-int PORTADD = 0; //tmp
-
 bool waitMyTurnLock = false;
 
 bool waitMyTurn(Plateau *plateau, Player *my, bool *myTurn) // (return ?)
@@ -34,7 +31,7 @@ bool waitMyTurn(Plateau *plateau, Player *my, bool *myTurn) // (return ?)
     if (!my->receive(receive)) {
         cerr << "receive faild" << endl;
         waitMyTurnLock = false;
-        exit(84);return false;
+        return false;
     }
     if (receive.type == Receiver::YourTurn) {
         *myTurn = true;
@@ -52,19 +49,18 @@ bool waitMyTurn(Plateau *plateau, Player *my, bool *myTurn) // (return ?)
     else {
         cerr << "bad receive type (" << receive.type << ")" << endl;
         waitMyTurnLock = false;
-        exit(84);return false;
+        return false;
     }
     waitMyTurnLock = false;
     return true;
 }
 
-int game(RenderWindow &window, Plateau &plateau)
+int game(RenderWindow &window, Player &my, Plateau &plateau)
 {
-    Player my(true ? Color::White : Color::Black); // tmp
     bool myTurn = false;
     Thread waitMyTurnThread(bind(&waitMyTurn, &plateau, &my, &myTurn));
 
-    for (size_t i = 0; i < 10 && !my.connectClient("10.19.254.109", PORT + i); i++);
+    cerr << "game launche" << endl;
     while (window.isOpen()) {
         if (!myTurn && !waitMyTurnLock)
             waitMyTurnThread.launch();
@@ -122,12 +118,24 @@ int game(RenderWindow &window, Plateau &plateau)
     return 0;
 }
 
-int menu(RenderWindow &window)
+bool menu(RenderWindow &window)
 {
-    Plateau plateau;
+    Player my(true ? Color::White : Color::Black); // tmp
+    Receiver receive;
 
-    game(window, plateau);
-    return 0;
+    for (size_t i = 0; i < 10 && !my.connectClient(IpAddress::getLocalAddress(), PORT + i); i++);
+    if (!my.receive(receive))
+        return false;
+    if (receive.type == Receiver::PlateauPlan) {
+        cerr << "receive.type == Receiver::PlateauPlan" << endl;
+        Plateau plateau(receive.planPlateau);
+
+        cerr << "Plateau plateau(receive.planPlateau)" << endl;
+        game(window, my, plateau);
+    }
+    else
+        return false;
+    return true;
 }
 
 int client()
@@ -139,9 +147,54 @@ int client()
     return 0;
 }
 
-int server()
+bool serverWaitMove(Plateau &plateau, const vector<Player*> &playerList, const size_t &turn)
 {
-    Plateau plateau;
+    Receiver receive;
+    Vector2u pos1;
+    Vector2u pos2;
+
+    while (true) {
+        if (!playerList[turn]->receive(receive)) {
+            cerr << "receive move faild" << endl;
+            return false;
+        }
+        if (receive.type == Receiver::Move) {
+            pos1 = receive.move.pawnPos;
+            pos2 = receive.move.movePos;
+        }
+        else {
+            cerr << "bad receive type" << endl;
+            return false;
+        }
+        cout << pos1.x << " " << pos1.y << " | " << pos2.x << " " << pos2.y << endl;
+        // TODO : check color of pawn on pos1
+        if (plateau.setStatus(pos1) && plateau.move(pos1, pos2)) {
+            if (!playerList[turn]->sendError(Receiver::Ok)) {
+                cerr << "OK send faild" << endl;
+                return false;
+            }
+        }
+        else {
+            cerr << "bad move" << endl;
+            if (!playerList[turn]->sendError(Receiver::IllegalMove)) {
+                cerr << "error send faild" << endl;
+                return false;
+            }
+            continue;
+        }
+        break;
+    }
+    for (Player *player : playerList)
+        if (!player->sendMove(pos1, pos2)) {
+            cerr << "send move faild" << endl;
+            return false;
+        }
+    return true;
+}
+
+int server(Plateau &plateau)
+{
+    PlanPlateau planPlateau = plateau.getPlan();
     size_t turn = 0;
     vector<Player*> playerList;
     TcpListener listener;
@@ -153,49 +206,18 @@ int server()
             cerr << "connect faild (i:" << i << ")" << endl;
             return 84;
         }
+        if (!player->sendPlanPlateau(planPlateau)) {
+            cerr << "faild to send plan plateau" << endl;
+            return 84;
+        }
         playerList.push_back(player);
     }
     cout << "all players here" << endl;
     while (true) { // tmp
-        Receiver receive;
-        Vector2u pos1;
-        Vector2u pos2;
-
         if (!playerList[turn]->sendYourTurn())
             cerr << "sendTurn faild (turn: " << turn << ")" << endl;
-        if (!playerList[turn]->receive(receive)) {
-            cerr << "receive move faild" << endl;
+        if (!serverWaitMove(plateau, playerList, turn))
             break;
-        }
-        if (receive.type == Receiver::Move) {
-            pos1 = receive.move.pawnPos;
-            pos2 = receive.move.movePos;
-        }
-        else {
-            cerr << "bad receive type" << endl;
-            break;
-        }
-        cout << turn << ": " << pos1.x << " " << pos1.y << " | " << pos2.x << " " << pos2.y << endl;
-        // TODO : check color of pawn on pos1
-        if (plateau.setStatus(pos1) && plateau.move(pos1, pos2)) {
-            if (!playerList[turn]->sendError(Receiver::Ok)) {
-                cerr << "OK send faild" << endl;
-                break;
-            }
-        }
-        else {
-            cerr << "bad move" << endl;
-            if (!playerList[turn]->sendError(Receiver::IllegalMove)) {
-                cerr << "error send faild" << endl;
-                break;
-            }
-            continue;
-        }
-        for (Player *player : playerList)
-            if (!player->sendMove(pos1, pos2)) {
-                cerr << "send move faild" << endl;
-                break;
-            }
         turn++;
         if (turn >= playerList.size())
             turn = 0;
@@ -205,11 +227,27 @@ int server()
     return 0;
 }
 
+bool create_server(const string &fileName = "")
+{
+    PlanPlateau planPlateau;
+
+    if (fileName == "") {
+        Plateau plateau;
+
+        return server(plateau);
+    }
+    if (!planPlateau.loadFromFile(fileName))
+        return false;
+    Plateau plateau(planPlateau);
+
+    return server(plateau);
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 1)
         return client();
-    else if (argc == 2 && (string(argv[1]) == "server" || string(argv[1]) == "s"))
-        return server();
+    else if ((argc == 2 || argc == 3) && (string(argv[1]) == "server" || string(argv[1]) == "s"))
+        return create_server(argc == 3 ? string(argv[2]) : "");
     return 84;
 }

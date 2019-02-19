@@ -16,8 +16,28 @@ bool receiveFormatted(TcpSocket &socket, Receiver &receiver)
         return false;
     if (!(packet >> receiver.type))
         return false;
-    if (receiver.type == Receiver::PacketType::Plateau) {
-        // TODO
+    if (receiver.type == Receiver::PacketType::PlateauPlan) {
+        string fileName; // ?
+        Vector2u size;
+
+        if (!(packet >> fileName))
+            return false;
+        receiver.planPlateau.setFileName(fileName); // ?
+        if (!(packet >> size))
+            return false;
+        receiver.planPlateau.setSize(size);
+        for (Uint32 i = 0; i < receiver.planPlateau.getSize().x; i++)
+            for (Uint32 j = 0; j < receiver.planPlateau.getSize().y; j++) {
+                PawnParam pawn;
+                bool exist;
+
+                if (!(packet >> exist))
+                    return false;
+                receiver.planPlateau.setExist(i, j, exist);
+                if (!(packet >> pawn))
+                    return false;
+                receiver.planPlateau.setPawn(i, j, pawn);
+            }
     }
     else if (receiver.type == Receiver::PacketType::Player) {
         // TODO
