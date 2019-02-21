@@ -48,9 +48,16 @@ Plateau::Plateau(const PlanPlateau &planPlateau)
 Plateau::Plateau(const Plateau &plateau)
     : Plateau(plateau.size)
 {
+    pawnMap = plateau.pawnMap;
+    affRect = plateau.affRect;
+    select = plateau.select; // ?
+    info = plateau.info; // ?
     for (Uint32 i = 0; i < size.x; i++)
-        for (Uint32 j = 0; j < size.y; j++)
+        for (Uint32 j = 0; j < size.y; j++) {
+            tab[i][j].exist = plateau.tab[i][j].exist;
             tab[i][j].pawn = plateau.tab[i][j].pawn;
+        }
+    fileName = plateau.fileName;
 }
 
 Plateau::~Plateau()
@@ -58,20 +65,6 @@ Plateau::~Plateau()
     for (Uint32 i = 0; i < size.x; i++)
         delete [] tab[i];
     delete [] tab;
-}
-
-PlanPlateau Plateau::getPlan() const
-{
-    PlanPlateau planPlateau;
-
-    planPlateau.setSize(size);
-    for (Uint32 i = 0; i < size.x; i++)
-        for (Uint32 j = 0; j < size.y; j++) {
-            planPlateau.setExist(i, j, tab[i][j].exist);
-            planPlateau.setPawn(i, j, tab[i][j].pawn);
-        }
-    planPlateau.setFileName(fileName);
-    return planPlateau;
 }
 
 bool Plateau::saveToFile() const
@@ -104,6 +97,26 @@ bool Plateau::saveToFile(const string &_fileName)
     return saveToFile();
 }
 
+PlanPlateau Plateau::getPlan() const
+{
+    PlanPlateau planPlateau;
+
+    planPlateau.setSize(size);
+    for (Uint32 i = 0; i < size.x; i++)
+        for (Uint32 j = 0; j < size.y; j++) {
+            planPlateau.setExist(i, j, tab[i][j].exist);
+            planPlateau.setPawn(i, j, tab[i][j].pawn);
+        }
+    planPlateau.setFileName(fileName);
+    return planPlateau;
+}
+
+const Plateau::Tab &Plateau::getTab(const Uint32 x, const Uint32 y) const
+{
+    //if (x >= size.x || y >= size.y) // TODO
+    return tab[x][y];
+}
+
 const Vector2u &Plateau::getSize() const
 {
     return size;
@@ -134,7 +147,7 @@ bool Plateau::move(const Vector2u &pawnPos, const Vector2u &movePos)
     return true;
 }
 
-bool Plateau::setStatus(const Vector2u &pawnPos)
+bool Plateau::setStatus(const Vector2u &pawnPos, const bool &basicOnly) // ?
 {
     const PawnRule *pawnRule;
     Angle angle;
@@ -144,7 +157,9 @@ bool Plateau::setStatus(const Vector2u &pawnPos)
     if (!tab[pawnPos.x][pawnPos.y].exist)
         return false;
     cleanStatus();
-    pawnRule = pawnMap.getPawnRule(tab[pawnPos.x][pawnPos.y].pawn.type);
+    if (!pawnMap)
+        return false;
+    pawnRule = pawnMap->getPawnRule(tab[pawnPos.x][pawnPos.y].pawn.type);
     if (!pawnRule) {
         tab[pawnPos.x][pawnPos.y].basicStatus = BasicStatus::My;
         return false;
@@ -153,6 +168,14 @@ bool Plateau::setStatus(const Vector2u &pawnPos)
     setBasicStatus(pawnPos, pawnRule->getMove(angle), BasicStatus::Move);
     setBasicStatus(pawnPos, pawnRule->getEat(angle), BasicStatus::Eat);
     tab[pawnPos.x][pawnPos.y].basicStatus = BasicStatus::My;
+    if (basicOnly)
+        return true;
+    for (Uint32 i = 0; i < size.x; i++)
+        for (Uint32 j = 0; j < size.y; j++)
+            if (tab[i][j].basicStatus) {
+                setDangerStatus(pawnPos, Vector2u(i, j)); // to move in setBasicStatus for opti
+                // TODO
+            }
     return true;
 }
 
@@ -180,7 +203,7 @@ Vector2u Plateau::convertMousePos(const Vector2i &mousePos) const
 }
 
 Plateau::Plateau(const Vector2u &_size)
-    : affRect(IntRect(480, 60, 960, 960)), select(_size), size(_size)
+    : pawnMap(NULL), affRect(IntRect(480, 60, 960, 960)), select(_size), info(_size), size(_size)
 {
     tab = new Tab* [size.x];
     for (Uint32 i = 0; i < size.x; i++)
@@ -190,37 +213,98 @@ Plateau::Plateau(const Vector2u &_size)
 
 void Plateau::draw(RenderTarget &target, RenderStates states) const
 {
-    Vector2f rectSize(affRect.width / size.x, affRect.height / size.y);
-    RectangleShape rectangle(rectSize);
+    const Vector2f rectSize(affRect.width / size.x, affRect.height / size.y);
     const Uint32 outlineThickness = rectSize.x / 60;
-    RectangleShape statusRect(Vector2f(rectSize.x - outlineThickness * 2, rectSize.y - outlineThickness * 2));
+    RectangleShape rectangle(rectSize);
+    RectangleShape infoRect(Vector2f(rectSize.x * 0.15, rectSize.y * 0.15));
+
+    states.transform *= getTransform();
+    infoRect.setOutlineThickness(outlineThickness);
+    infoRect.setOrigin(infoRect.getSize().x / 2, infoRect.getSize().y / 2);
+    for (Uint32 j = 0; j < size.y; j++)
+        for (Uint32 i = 0; i < size.x; i++)
+            if (tab[i][j].exist) {
+                Vector2f rectPos(rectSize.x * i, rectSize.y * j);
+                Color infoColor;
+
+                rectPos.x += affRect.left;
+                rectPos.y += affRect.top;
+                rectangle.setPosition(rectPos);
+                rectangle.setFillColor((i + j) % 2 ? Color(60, 60, 60) : Color(210, 210, 210));
+                target.draw(rectangle, states);
+                pawnMap->aff(target, tab[i][j].pawn, FloatRect(rectPos.x, rectPos.y, rectSize.x, rectSize.y));
+                if (tab[i][j].dangerStatus.size()) { // basicOnly ?
+                    infoColor = Color::Red;
+                    rectPos += Vector2f(rectSize.x * 0.20, rectSize.y * 0.20);
+                }
+                if (tab[i][j].revengeStatus.size()) { // basicOnly ?
+                    infoColor = Color::Blue;
+                    rectPos += Vector2f(rectSize.x * 0.80, rectSize.y * 0.20);
+                }
+                if (tab[i][j].dangerStatus.size() || tab[i][j].revengeStatus.size()) { // basicOnly ?
+                    infoRect.setPosition(rectPos);
+                    infoRect.setOutlineColor(infoColor);
+                    infoRect.setFillColor(Color(infoColor.r, infoColor.g, infoColor.b, infoColor.a / 10));
+                    target.draw(infoRect, states);
+                }
+            }
+    affBasicStatus(target, states);
+    //if (basicOnly) return; // TODO // ?
+    if (info.x >= size.x && info.y >= size.y)
+        return;
+    affAdvancedStatus(target, states, tab[info.x][info.y].dangerStatus, Color::Red);
+    affAdvancedStatus(target, states, tab[info.x][info.y].revengeStatus, Color::Blue);
+}
+
+void Plateau::affBasicStatus(RenderTarget &target, RenderStates &states) const
+{
+    const Vector2f rectSize(affRect.width / size.x, affRect.height / size.y);
+    const Uint32 outlineThickness = rectSize.x / 60;
+    RectangleShape rectangle(Vector2f(rectSize.x - outlineThickness * 2, rectSize.y - outlineThickness * 2));
 
     states.transform *= getTransform();
     for (Uint32 j = 0; j < size.y; j++)
-        for (Uint32 i = 0; i < size.x; i++) {
-            Vector2f rectPos(rectSize.x * i, rectSize.y * j);
-            Color statusColor = Color::Transparent;
+        for (Uint32 i = 0; i < size.x; i++)
+            if (tab[i][j].exist) {
+                Vector2f rectPos(rectSize.x * i + outlineThickness, rectSize.y * j + outlineThickness);
+                Color color = Color::Transparent;
 
-            if (!tab[i][j].exist)
-                continue;
-            rectPos.x += affRect.left;
-            rectPos.y += affRect.top;
-            rectangle.setPosition(rectPos);
-            rectangle.setFillColor((i + j) % 2 ? Color(60, 60, 60) : Color(210, 210, 210));
-            target.draw(rectangle, states);
-            pawnMap.aff(target, tab[i][j].pawn, FloatRect(rectPos.x, rectPos.y, rectSize.x, rectSize.y));
-            statusRect.setPosition(Vector2f(rectPos.x + outlineThickness, rectPos.y + outlineThickness));
-            if (tab[i][j].basicStatus == BasicStatus::My)
-                statusColor = Color::Blue;
-            else if (tab[i][j].basicStatus == BasicStatus::Move)
-                statusColor = Color::Green;
-            else if (tab[i][j].basicStatus == BasicStatus::Eat)
-                statusColor = Color::Red;
-            statusRect.setOutlineThickness(outlineThickness);
-            statusRect.setOutlineColor(statusColor);
-            statusRect.setFillColor(Color(statusColor.r, statusColor.g, statusColor.b, statusColor.a / 10));
-            target.draw(statusRect, states);
-        }
+                rectPos.x += affRect.left;
+                rectPos.y += affRect.top;
+                rectangle.setPosition(rectPos);
+                if (tab[i][j].basicStatus == BasicStatus::My)
+                    color = Color::Blue;
+                else if (tab[i][j].basicStatus == BasicStatus::Move)
+                    color = Color::Green;
+                else if (tab[i][j].basicStatus == BasicStatus::Eat)
+                    color = Color::Red;
+                rectangle.setOutlineThickness(outlineThickness);
+                rectangle.setOutlineColor(color);
+                rectangle.setFillColor(Color(color.r, color.g, color.b, color.a / 10));
+                target.draw(rectangle, states);
+            }
+}
+
+void Plateau::affAdvancedStatus(RenderTarget &target, RenderStates &states, const vector<Vector2u> &advancedStatus, const Color &color) const
+{
+    const Vector2f rectSize(affRect.width / size.x, affRect.height / size.y);
+    RectangleShape rectangle(Vector2f(rectSize.x * 0.75, rectSize.y * 0.75));
+    const Uint32 outlineThickness = rectSize.x / 60;
+
+    states.transform *= getTransform();
+    rectangle.setOutlineThickness(outlineThickness);
+    rectangle.setOutlineColor(color);
+    rectangle.setFillColor(Color(color.r, color.g, color.b, color.a / 10));
+    rectangle.setOrigin(rectangle.getSize().x / 2, rectangle.getSize().y / 2);
+    rectangle.rotate(45);
+    for (const Vector2u &statusPos : advancedStatus) {
+        Vector2f rectPos(rectSize.x * statusPos.x, rectSize.y * statusPos.y);
+
+        rectPos.x += affRect.left + rectSize.x * 0.5;
+        rectPos.y += affRect.top + rectSize.y * 0.5;
+        rectangle.setPosition(rectPos);
+        target.draw(rectangle, states);
+    }
 }
 
 void Plateau::setBasicStatus(const Vector2u &pawnPos, const vector<PawnRule::Direp> &direpTab, const BasicStatus &status)
@@ -249,4 +333,19 @@ void Plateau::setBasicStatus(const Vector2u &pawnPos, const vector<PawnRule::Dir
                 tab[pos.x][pos.y].basicStatus = status;
         }
     }
+}
+
+void Plateau::setDangerStatus(const Vector2u &pawnPos, const Vector2u &movePos)
+{
+    Plateau plateau(*this);
+
+    plateau.setStatus(pawnPos, true);
+    plateau.move(pawnPos, movePos);
+    for (Uint32 i = 0; i < plateau.size.x; i++)
+        for (Uint32 j = 0; j < plateau.size.y; j++)
+            if (plateau.tab[i][j].pawn.type != "" && plateau.tab[i][j].pawn.color != plateau.tab[movePos.x][movePos.y].pawn.color) {
+                plateau.setStatus(Vector2u(i, j), true);
+                if (plateau.tab[movePos.x][movePos.y].basicStatus == BasicStatus::Eat)
+                    tab[movePos.x][movePos.y].dangerStatus.push_back(Vector2u(i, j));
+            }
 }

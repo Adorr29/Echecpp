@@ -70,6 +70,4 @@ private:
     map<string, Pawn> pawn;
 };
 
-extern PawnMap pawnMap; // tmp
-
 #endif
