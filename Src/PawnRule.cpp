@@ -28,9 +28,9 @@ const vector<PawnRule::Direp> PawnRule::getEat(const Angle &angle) const
     return eatRotate;
 }
 
-const string &PawnRule::getProperty() const
+bool PawnRule::isProperty(const string &oneProperty) const
 {
-    return property;
+    return property.find(oneProperty) != string::npos;
 }
 
 PawnRule::Direp PawnRule::rotate(const PawnRule::Direp &direp, const Angle &angle) const

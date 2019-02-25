@@ -126,23 +126,47 @@ struct IaMove
     Int32 score;
 };
 
+static Uint32 getPawnScore(const string &type)
+{
+    if (type == "Pawn") // ?
+        return 1;
+    if (type == "Knight" || type == "Bishop")
+        return 3;
+    if (type == "Rook")
+        return 5;
+    if (type == "Queen")
+        return 9;
+    if (type == "King") // ?
+        return 100;
+    cerr << "Waring: no score for \"" << type << "\" !" << endl;
+    return 0;
+}
+
 void iaStockMove(vector<IaMove> &moveList, const Plateau &plateau, const Uint32 x, const Uint32 y)
 {
     for (Uint32 i = 0; i < plateau.getSize().x; i++)
         for (Uint32 j = 0; j < plateau.getSize().y; j++)
             if (plateau.getTab(i, j).basicStatus == Plateau::Move || plateau.getTab(i, j).basicStatus == Plateau::Eat) {
                 IaMove iaMove;
+                string info = ""; // tmp
 
                 iaMove.pawnPos = Vector2u(x, y);
                 iaMove.movePos = Vector2u(i, j);
-                    iaMove.score = 0;
+                iaMove.score = 0;
                 if (plateau.getTab(i, j).basicStatus == Plateau::Move)
                     cout << "Move: ";
                 if (plateau.getTab(i, j).basicStatus == Plateau::Eat) {
                     cout << "Eat:  ";
-                    iaMove.score = 1; // TODO
+                    info += string("  ") + plateau.getTab(i, j).pawn.type + " " + to_string(getPawnScore(plateau.getTab(i, j).pawn.type));
+                    iaMove.score += getPawnScore(plateau.getTab(i, j).pawn.type);
                 }
-                cout << "(" << x << ";" << y << ") => (" << i << ";" << j << ")" << endl;
+                if (plateau.getTab(i, j).dangerStatus.size()) {
+                    iaMove.score -= getPawnScore(plateau.getTab(x, y).pawn.type);
+                    info += string(" [") + plateau.getTab(x, y).pawn.type + " " + to_string(getPawnScore(plateau.getTab(x, y).pawn.type)) + "]";
+                }
+                cout << "(" << x << ";" << y << ") => (" << i << ";" << j << ")" << " Score: " << iaMove.score << endl;
+                if (info.size())
+                    cerr << info << endl;
                 moveList.push_back(iaMove);
             }
 }
@@ -154,7 +178,7 @@ void iaPlay(const Player &my, Plateau &plateau, Vector2u &pawnPos, Vector2u &mov
     for (Uint32 i = 0; i < plateau.getSize().x; i++)
         for (Uint32 j = 0; j < plateau.getSize().y; j++)
             if (plateau.getTab(i, j).pawn.color == my.getColor()) {
-                plateau.setStatus(Vector2u(i, j), true); // ?
+                plateau.setStatus(Vector2u(i, j));
                 iaStockMove(moveList, plateau, i, j);
             }
     cout << "moveList size: " << moveList.size() << endl;

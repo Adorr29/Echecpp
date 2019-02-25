@@ -59,8 +59,10 @@ private:
     void draw(RenderTarget &target, RenderStates states) const;
     void affBasicStatus(RenderTarget &target, RenderStates &states) const;
     void affAdvancedStatus(RenderTarget &target, RenderStates &states, const vector<Vector2u> &advancedStatus, const Color &color) const;
+    void moveNoCheck(const Vector2u &pawnPos, const Vector2u &movePos);
     void setBasicStatus(const Vector2u &pawnPos, const vector<PawnRule::Direp> &direpTab, const BasicStatus &status);
     void setDangerStatus(const Vector2u &pawnPos, const Vector2u &movePos);
+    void setRevengeStatus(const Vector2u &pawnPos, const Vector2u &movePos);
 
 public:
     PawnMap *pawnMap;

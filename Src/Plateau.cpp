@@ -141,9 +141,7 @@ bool Plateau::move(const Vector2u &pawnPos, const Vector2u &movePos)
 {
     if (!checkMove(pawnPos, movePos))
         return false;
-    tab[movePos.x][movePos.y].pawn = tab[pawnPos.x][pawnPos.y].pawn;
-    tab[movePos.x][movePos.y].pawn.first = false;
-    tab[pawnPos.x][pawnPos.y].pawn.type = "";
+    moveNoCheck(pawnPos, movePos);
     return true;
 }
 
@@ -174,6 +172,11 @@ bool Plateau::setStatus(const Vector2u &pawnPos, const bool &basicOnly) // ?
         for (Uint32 j = 0; j < size.y; j++)
             if (tab[i][j].basicStatus) {
                 setDangerStatus(pawnPos, Vector2u(i, j)); // to move in setBasicStatus for opti
+                if (pawnRule->isProperty("royalty"))
+                    if (tab[i][j].basicStatus != BasicStatus::My && tab[i][j].dangerStatus.size()) {
+                        tab[i][j].basicStatus = BasicStatus::None;
+                        tab[i][j].dangerStatus.clear();
+                    }
                 // TODO
             }
     return true;
@@ -307,6 +310,14 @@ void Plateau::affAdvancedStatus(RenderTarget &target, RenderStates &states, cons
     }
 }
 
+void Plateau::moveNoCheck(const Vector2u &pawnPos, const Vector2u &movePos)
+{
+    tab[movePos.x][movePos.y].pawn = tab[pawnPos.x][pawnPos.y].pawn;
+    tab[movePos.x][movePos.y].pawn.first = false;
+    if (pawnPos.x != movePos.x || pawnPos.y != movePos.y)
+        tab[pawnPos.x][pawnPos.y].pawn.type = "";
+}
+
 void Plateau::setBasicStatus(const Vector2u &pawnPos, const vector<PawnRule::Direp> &direpTab, const BasicStatus &status)
 {
     for (const PawnRule::Direp &direp : direpTab) {
@@ -339,13 +350,19 @@ void Plateau::setDangerStatus(const Vector2u &pawnPos, const Vector2u &movePos)
 {
     Plateau plateau(*this);
 
-    plateau.setStatus(pawnPos, true);
-    plateau.move(pawnPos, movePos);
+    plateau.moveNoCheck(pawnPos, movePos);
     for (Uint32 i = 0; i < plateau.size.x; i++)
         for (Uint32 j = 0; j < plateau.size.y; j++)
             if (plateau.tab[i][j].pawn.type != "" && plateau.tab[i][j].pawn.color != plateau.tab[movePos.x][movePos.y].pawn.color) {
-                plateau.setStatus(Vector2u(i, j), true);
+                plateau.setStatus(Vector2u(i, j), true); // !
                 if (plateau.tab[movePos.x][movePos.y].basicStatus == BasicStatus::Eat)
                     tab[movePos.x][movePos.y].dangerStatus.push_back(Vector2u(i, j));
             }
+}
+
+void setRevengeStatus(const Vector2u &pawnPos, const Vector2u &movePos)
+{
+    (void)pawnPos;
+    (void)movePos;
+    // TODO
 }
