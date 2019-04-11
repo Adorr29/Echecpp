@@ -28,6 +28,7 @@ private:
 
 public:
     PlanPlateau();
+    PlanPlateau(const PlanPlateau &planPlateau);
     ~PlanPlateau();
     const string &getFileName() const;
     const Vector2u &getSize() const;
@@ -38,6 +39,7 @@ public:
     void setExist(const Uint32 &x, const Uint32 &y, const bool &exist);
     void setPawn(const Uint32 &x, const Uint32 &y, const PawnParam &pawn);
     bool loadFromFile(const string &_fileName);
+    PlanPlateau &operator=(const PlanPlateau &planPlateau);
 
 private:
     void destroy();

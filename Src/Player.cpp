@@ -25,12 +25,8 @@ bool Player::connectClient(const IpAddress &ip, unsigned short port)
     return true;
 }
 
-bool Player::connectServer(unsigned short port)
+bool Player::connectServer(TcpListener &listener)
 {
-    TcpListener listener;
-
-    if (listener.listen(port) != Socket::Done)
-        return false;
     if (listener.accept(socket) != Socket::Done)
         return false;
     return true;

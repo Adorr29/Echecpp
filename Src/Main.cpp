@@ -242,7 +242,8 @@ bool create_ia(const IpAddress &ip = IpAddress::getLocalAddress())
     Player my(false ? Color::White : Color::Black); // tmp
     Receiver receive;
 
-    for (size_t i = 0; i < 100 && !my.connectClient(ip, PORT + i); i++);
+    if (!my.connectClient(ip, PORT))
+        return false;
     if (!my.receive(receive))
         return false;
     if (receive.type == Receiver::PlateauPlan) {
@@ -263,13 +264,16 @@ bool menu(RenderWindow &window, const IpAddress &ip = IpAddress::getLocalAddress
     Player my(true ? Color::White : Color::Black); // tmp
     Receiver receive;
 
-    for (size_t i = 0; i < 100 && !my.connectClient(ip, PORT + i); i++);
+    if (!my.connectClient(ip, PORT))
+        return false;
+    cout << "Connected !" << endl;
     if (!my.receive(receive))
         return false;
     if (receive.type == Receiver::PlateauPlan) {
         Plateau plateau(receive.planPlateau);
 
         plateau.pawnMap = &pawnMap;
+        cout << "Plateau received !" << endl;
         if (!game(window, my, plateau))
             return false;
     }
@@ -278,14 +282,14 @@ bool menu(RenderWindow &window, const IpAddress &ip = IpAddress::getLocalAddress
     return true;
 }
 
-int client(const IpAddress &ip = IpAddress::getLocalAddress()) // tmp
+bool client(const IpAddress &ip = IpAddress::getLocalAddress()) // tmp
 {
     RenderWindow window(VideoMode::getDesktopMode(), "Echec++", Style::Fullscreen);
 
     srand(time(NULL));
     window.setFramerateLimit(30);
     menu(window, ip);
-    return 0;
+    return true;
 }
 
 bool serverWaitMove(Plateau &plateau, const vector<Player*> &playerList, const size_t &turn)
@@ -339,21 +343,22 @@ int server(Plateau &plateau)
     size_t turn = 0;
     vector<Player*> playerList;
     TcpListener listener;
-    unsigned short port = PORT + rand() % 100; // tmp
 
-    for (size_t i = 0; i < 2; i++) { // tmp
-        Player *player = new Player(!i ? Color::White : Color::Black);
+    if (listener.listen(PORT) != Socket::Done)
+        return 84;
+    while (playerList.size() < 2) { // tmp
+        Player *player = new Player(Color::White); // tmp
 
-        if (!player->connectServer(port + i)) {
-            cerr << "connect faild (i:" << i << ")" << endl;
-            return 84;
-        }
+        if (player->connectServer(listener))
+            playerList.push_back(player);
+        else
+            delete player;
+    }
+    for (Player *player : playerList)
         if (!player->sendPlanPlateau(planPlateau)) {
             cerr << "faild to send plan plateau" << endl;
             return 84;
         }
-        playerList.push_back(player);
-    }
     cout << "all players here" << endl;
     while (true) { // tmp
         if (!playerList[turn]->sendYourTurn())
@@ -389,9 +394,49 @@ bool create_server(const string &fileName = "")
     return server(plateau);
 }
 
+bool editor(RenderWindow &window, PlanPlateau &planPlateau, PawnMap &pawnMap)
+{
+    while (window.isOpen()) {
+        Plateau plateau(planPlateau);
+
+        plateau.affRect.left = plateau.affRect.top;
+        plateau.pawnMap = &pawnMap;
+        for (Event event; window.pollEvent(event);) {
+            if (event.type == Event::Closed)
+                window.close();
+            else if (event.type == Event::MouseButtonPressed) {
+                // TODO
+            }
+        }
+        window.clear();
+        window.draw(plateau);
+        window.display();
+    }
+    return true;
+}
+
+bool create_editor(const string &fileName = "")
+{
+    RenderWindow window(VideoMode::getDesktopMode(), "Echec++ editor", Style::Fullscreen);
+    PlanPlateau planPlateau;
+    PawnMap pawnMap;
+
+    window.setFramerateLimit(30);
+    if (fileName == "") {
+        Plateau plateau;
+
+        planPlateau = plateau.getPlan();
+    }
+    else if (!planPlateau.loadFromFile(fileName))
+        return false;
+    return editor(window, planPlateau, pawnMap);
+}
+
 int main(int argc, char **argv)
 {
-    if ((argc == 2 || argc == 3) && (string(argv[1]) == "server" || string(argv[1]) == "s"))
+    if ((argc == 2 || argc == 3) && (string(argv[1]) == "editor" || string(argv[1]) == "e"))
+        return create_editor(argc == 3 ? string(argv[2]) : "");
+    else if ((argc == 2 || argc == 3) && (string(argv[1]) == "server" || string(argv[1]) == "s"))
         return create_server(argc == 3 ? string(argv[2]) : "");
     else if ((argc == 2 || argc == 3) && string(argv[1]) == "ia") {
         if (argc == 2)

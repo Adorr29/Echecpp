@@ -233,16 +233,17 @@ void Plateau::draw(RenderTarget &target, RenderStates states) const
                 rectPos.x += affRect.left;
                 rectPos.y += affRect.top;
                 rectangle.setPosition(rectPos);
-                rectangle.setFillColor((i + j) % 2 ? Color(60, 60, 60) : Color(210, 210, 210));
+                rectangle.setFillColor((i + j) % 2 ? Color(59, 59, 59) : Color(207, 207, 207));
                 target.draw(rectangle, states);
-                pawnMap->aff(target, tab[i][j].pawn, FloatRect(rectPos.x, rectPos.y, rectSize.x, rectSize.y));
+                if (pawnMap)
+                    pawnMap->aff(target, tab[i][j].pawn, FloatRect(rectPos.x, rectPos.y, rectSize.x, rectSize.y));
                 if (tab[i][j].dangerStatus.size()) { // basicOnly ?
                     infoColor = Color::Red;
-                    rectPos += Vector2f(rectSize.x * 0.20, rectSize.y * 0.20);
+                    rectPos += Vector2f(rectSize.x * 0.2, rectSize.y * 0.2);
                 }
                 if (tab[i][j].revengeStatus.size()) { // basicOnly ?
                     infoColor = Color::Blue;
-                    rectPos += Vector2f(rectSize.x * 0.80, rectSize.y * 0.20);
+                    rectPos += Vector2f(rectSize.x * 0.8, rectSize.y * 0.2);
                 }
                 if (tab[i][j].dangerStatus.size() || tab[i][j].revengeStatus.size()) { // basicOnly ?
                     infoRect.setPosition(rectPos);
@@ -314,8 +315,37 @@ void Plateau::moveNoCheck(const Vector2u &pawnPos, const Vector2u &movePos)
 {
     tab[movePos.x][movePos.y].pawn = tab[pawnPos.x][pawnPos.y].pawn;
     tab[movePos.x][movePos.y].pawn.first = false;
-    if (pawnPos.x != movePos.x || pawnPos.y != movePos.y)
+    if (pawnPos != movePos)
         tab[pawnPos.x][pawnPos.y].pawn.type = "";
+    if (pawnPromotion(movePos))
+        tab[movePos.x][movePos.y].pawn.type = "Queen"; // tmp
+}
+
+bool Plateau::pawnPromotion(const Vector2u &pawnPos) const
+{
+    const PawnRule *pawnRule = getPawnRule(pawnPos);
+    bool further = false;
+
+    if (!pawnRule || !pawnRule->isProperty("Promotion"))
+        return false;
+    if (tab[pawnPos.x][pawnPos.y].pawn.angle == Angle::Left && pawnPos.x == 0)
+        further = true;
+    else if (tab[pawnPos.x][pawnPos.y].pawn.angle == Angle::Up && pawnPos.y == 0)
+        further = true;
+    else if (tab[pawnPos.x][pawnPos.y].pawn.angle == Angle::Right && pawnPos.x == size.x - 1)
+        further = true;
+    else if (tab[pawnPos.x][pawnPos.y].pawn.angle == Angle::Down && pawnPos.y == size.y - 1)
+        further = true;
+    else if (!tab[pawnPos.x][pawnPos.y].exist)
+        further = true;
+    return further;
+}
+
+const PawnRule *Plateau::getPawnRule(const Vector2u &pawnPos) const
+{
+    if (!pawnMap)
+        return NULL;
+    return pawnMap->getPawnRule(tab[pawnPos.x][pawnPos.y].pawn.type);
 }
 
 void Plateau::setBasicStatus(const Vector2u &pawnPos, const vector<PawnRule::Direp> &direpTab, const BasicStatus &status)
@@ -364,5 +394,5 @@ void setRevengeStatus(const Vector2u &pawnPos, const Vector2u &movePos)
 {
     (void)pawnPos;
     (void)movePos;
-    // TODO
+    // TODO ?
 }

@@ -13,6 +13,11 @@ PlanPlateau::PlanPlateau()
 {
 }
 
+PlanPlateau::PlanPlateau(const PlanPlateau &planPlateau)
+{
+    *this = planPlateau;
+}
+
 PlanPlateau::~PlanPlateau()
 {
     destroy();
@@ -98,4 +103,14 @@ void PlanPlateau::destroy()
     for (Uint32 i = 0; i < size.x; i++)
         delete [] tab[i];
     delete [] tab;
+}
+
+PlanPlateau &PlanPlateau::operator=(const PlanPlateau &planPlateau)
+{
+    setSize(planPlateau.size);
+    for (Uint32 i = 0; i < size.x; i++)
+        for (Uint32 j = 0; j < size.y; j++)
+            tab[i][j] = planPlateau.tab[i][j];
+    fileName = planPlateau.fileName;
+    return *this;
 }
