@@ -146,23 +146,23 @@ void iaStockMove(vector<IaMove> &moveList, const Plateau &plateau, const Uint32 
 {
     for (Uint32 i = 0; i < plateau.getSize().x; i++)
         for (Uint32 j = 0; j < plateau.getSize().y; j++)
-            if (plateau.getTab(i, j).basicStatus == Plateau::Move || plateau.getTab(i, j).basicStatus == Plateau::Eat) {
+            if (plateau.getTab(Vector2u(i, j)).basicStatus == Plateau::Move || plateau.getTab(Vector2u(i, j)).basicStatus == Plateau::Eat) {
                 IaMove iaMove;
                 string info = ""; // tmp
 
                 iaMove.pawnPos = Vector2u(x, y);
                 iaMove.movePos = Vector2u(i, j);
                 iaMove.score = 0;
-                if (plateau.getTab(i, j).basicStatus == Plateau::Move)
+                if (plateau.getTab(Vector2u(i, j)).basicStatus == Plateau::Move)
                     cout << "Move: ";
-                if (plateau.getTab(i, j).basicStatus == Plateau::Eat) {
+                if (plateau.getTab(Vector2u(i, j)).basicStatus == Plateau::Eat) {
                     cout << "Eat:  ";
-                    info += string("  ") + plateau.getTab(i, j).pawn.type + " " + to_string(getPawnScore(plateau.getTab(i, j).pawn.type));
-                    iaMove.score += getPawnScore(plateau.getTab(i, j).pawn.type);
+                    info += string("  ") + plateau.getTab(Vector2u(i, j)).pawn.type + " " + to_string(getPawnScore(plateau.getTab(Vector2u(i, j)).pawn.type));
+                    iaMove.score += getPawnScore(plateau.getTab(Vector2u(i, j)).pawn.type);
                 }
-                if (plateau.getTab(i, j).dangerStatus.size()) {
-                    iaMove.score -= getPawnScore(plateau.getTab(x, y).pawn.type);
-                    info += string(" [") + plateau.getTab(x, y).pawn.type + " " + to_string(getPawnScore(plateau.getTab(x, y).pawn.type)) + "]";
+                if (plateau.getTab(Vector2u(i, j)).dangerStatus.size()) {
+                    iaMove.score -= getPawnScore(plateau.getTab(Vector2u(x, y)).pawn.type);
+                    info += string(" [") + plateau.getTab(Vector2u(x, y)).pawn.type + " " + to_string(getPawnScore(plateau.getTab(Vector2u(x, y)).pawn.type)) + "]";
                 }
                 cout << "(" << x << ";" << y << ") => (" << i << ";" << j << ")" << " Score: " << iaMove.score << endl;
                 if (info.size())
@@ -177,7 +177,7 @@ void iaPlay(const Player &my, Plateau &plateau, Vector2u &pawnPos, Vector2u &mov
 
     for (Uint32 i = 0; i < plateau.getSize().x; i++)
         for (Uint32 j = 0; j < plateau.getSize().y; j++)
-            if (plateau.getTab(i, j).pawn.color == my.getColor()) {
+            if (plateau.getTab(Vector2u(i, j)).pawn.color == my.getColor()) {
                 plateau.setStatus(Vector2u(i, j));
                 iaStockMove(moveList, plateau, i, j);
             }
@@ -312,8 +312,7 @@ bool serverWaitMove(Plateau &plateau, const vector<Player*> &playerList, const s
             return false;
         }
         cout << pos1.x << " " << pos1.y << " | " << pos2.x << " " << pos2.y << endl;
-        // TODO : check color of pawn on pos1
-        if (plateau.setStatus(pos1, true) && plateau.move(pos1, pos2)) { // (", true" ?)
+        if (plateau.getTab(pos1).pawn.color == playerList[turn]->getColor() && plateau.setStatus(pos1, true) && plateau.move(pos1, pos2)) { // (", true" ?)
             if (!playerList[turn]->sendError(Receiver::Ok)) {
                 cerr << "OK send faild" << endl;
                 return false;
@@ -347,18 +346,23 @@ int server(Plateau &plateau)
     if (listener.listen(PORT) != Socket::Done)
         return 84;
     while (playerList.size() < 2) { // tmp
-        Player *player = new Player(Color::White); // tmp
+        static bool tmp = true; // tmp
+        Player *player = new Player(tmp ? Color::White : Color::Black); // tmp
 
-        if (player->connectServer(listener))
+        if (player->connectServer(listener)) {
             playerList.push_back(player);
+            tmp = false;
+        }
         else
             delete player;
     }
-    for (Player *player : playerList)
+    for (Player *player : playerList) {
         if (!player->sendPlanPlateau(planPlateau)) {
             cerr << "faild to send plan plateau" << endl;
             return 84;
         }
+        // TODO send player
+    }
     cout << "all players here" << endl;
     while (true) { // tmp
         if (!playerList[turn]->sendYourTurn())

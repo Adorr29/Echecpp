@@ -111,10 +111,10 @@ PlanPlateau Plateau::getPlan() const
     return planPlateau;
 }
 
-const Plateau::Tab &Plateau::getTab(const Uint32 x, const Uint32 y) const
+const Plateau::Tab &Plateau::getTab(const Vector2u &pos) const
 {
     //if (x >= size.x || y >= size.y) // TODO
-    return tab[x][y];
+    return tab[pos.x][pos.y];
 }
 
 const Vector2u &Plateau::getSize() const

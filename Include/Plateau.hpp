@@ -46,7 +46,7 @@ public:
     bool saveToFile() const;
     bool saveToFile(const string &_fileName);
     PlanPlateau getPlan() const;
-    const Tab &getTab(const Uint32 x, const Uint32 y) const;
+    const Tab &getTab(const Vector2u &pos) const;
     const Vector2u &getSize() const;
     bool checkMove(const Vector2u &pawnPos, const Vector2u &movePos) const;
     bool move(const Vector2u &pawnPos, const Vector2u &movePos);
